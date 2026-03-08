@@ -1,0 +1,19 @@
+cancel: 'CANCEL'
+confirm: 'CONFIRM'
+hint:
+  restart:
+    config: '* marked item will be changed after restarting the application.'
+  usb:
+    add: 'Registered USB device connected.'
+    remove: 'Registered USB device disconnected.'
+    offline: 'Specified USB device offline.'
+  wireless:
+    add: 'Registered Wireless device connected.'
+    remove: 'Registered Wireless device removed.'
+  device:
+    info:
+      hide: 'Hide Device Info List'
+      empty: 'NO DEVICE CONNECTED'
+      detect_time: 'Detection takes few seconds.'
+  payload:
+    enter: 'Enter Payload'

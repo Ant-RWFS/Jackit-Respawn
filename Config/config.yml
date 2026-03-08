@@ -1,0 +1,39 @@
+﻿firmware:
+  current: 0
+  list:
+  - nrf-research-firmware.yml
+  - test.yml
+font:
+  current:
+    body: 2
+    headline: 0
+    label: 2
+  list:
+  - MoonHouse.ttf
+  - Bahnschrift-light.ttf
+  - Bahnschrift-regular.ttf
+  - Bahnschrift-bold.ttf
+  - Consola-regular.ttf
+  - Consola-bold.ttf
+  size:
+    large: 18
+    medium: 16
+    small: 12
+info:
+  author: ANT-RWFS
+  title: JACKIT MOBILE
+  version: 0.1.0
+resc:
+  file:
+    op: operation.yml
+    text: text.yml
+theme:
+  current: 0
+  list:
+  - Default-Green.yml
+  - Default-Black.yml
+  mode: 1
+video:
+  intro:
+    file: intro.mp4
+    skip: true

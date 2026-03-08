@@ -1,0 +1,5 @@
+GUI r
+DELAY 100
+STRING cmd /c echo You've Been PWNed! > %temp%\tempfile.txt && notepad %temp%\tempfile.txt
+ENTER
+DELAY 1000

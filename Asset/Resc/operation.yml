@@ -1,0 +1,22 @@
+attack:
+  mode:
+    name: 'Mode'
+    rp: 'Replay'
+    mj: 'Mousejack'
+  interval:
+    name: 'Interval'
+    fx: 'Fixed'
+    rd: 'Random'
+    min: 'Minium'
+    max: 'Maximum'
+  payload:
+    name: 'File'
+    sv: 'Save'
+    op: 'Open'
+    ex: ['txt', 'ps1', 'sh']
+    eg: 'payload.txt'
+  confirm:
+    scn: 'Scan'
+    atk: 'Attack'
+  language:
+    name: 'Language'
