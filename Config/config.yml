@@ -1,4 +1,4 @@
-﻿firmware:
+﻿device:
   current: 0
   list:
   - nrf-research-firmware.yml

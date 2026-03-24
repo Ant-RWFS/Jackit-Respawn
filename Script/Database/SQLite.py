@@ -2,13 +2,12 @@ import sqlite3 as sql
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from Script.Data import USBEvent, Formatter
-from Script.Publisher import EventBroadcaster
 
 
 class Operator:
     data_ft = Formatter()
 
-    def __init__(self, evt_bcst: EventBroadcaster, config):
+    def __init__(self, evt_bcst, config):
         self.bcst = evt_bcst
         self.config = config
         self.database_path = self.config.DATABASE
@@ -430,3 +429,338 @@ class Operator:
             callback(result)
         except Exception as e:
             callback({'error': str(e)})
+
+    def delete_all_rows_async(self, index, callback):
+        def delete_task():
+            try:
+                self.delete_all_rows(index)
+                self.reorder_no_field(index)
+                callback(True, None)
+            except Exception as e:
+                self.insert_system_event_async(
+                    self.data_ft.form_timestamp_str_in_year(),
+                    'DB Delete All Error',
+                    str(e)
+                )
+                callback(False, str(e))
+
+        self.executor.submit(delete_task)
+
+    def delete_rows_by_nos_async(self, index, nos_set, callback):
+        def delete_task():
+            try:
+                self.delete_rows_by_nos(index, nos_set)
+                self.reorder_no_field(index)
+                callback(True, None)
+            except Exception as e:
+                self.insert_system_event_async(
+                    self.data_ft.form_timestamp_str_in_year(),
+                    'DB Delete By Nos Error',
+                    str(e)
+                )
+                callback(False, str(e))
+
+        self.executor.submit(delete_task)
+
+    def delete_rows_except_nos_async(self, index, except_nos, callback):
+        def delete_task():
+            try:
+                self.delete_rows_except_nos(index, except_nos)
+                self.reorder_no_field(index)
+                callback(True, None)
+            except Exception as e:
+                self.insert_system_event_async(
+                    self.data_ft.form_timestamp_str_in_year(),
+                    'DB Delete Except Nos Error',
+                    str(e)
+                )
+                callback(False, str(e))
+
+        self.executor.submit(delete_task)
+
+    def delete_all_rows(self, index):
+        table_name = self.get_table_name_by_index(index)
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute(f'DELETE FROM {table_name}')
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            cursor.close()
+
+    def delete_rows_by_nos(self, index, nos_set):
+        if not nos_set:
+            return
+
+        table_name = self.get_table_name_by_index(index)
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+
+        try:
+            placeholders = ','.join(['?' for _ in nos_set])
+            query = f'DELETE FROM {table_name} WHERE no IN ({placeholders})'
+            cursor.execute(query, list(nos_set))
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            cursor.close()
+
+    def delete_rows_except_nos(self, index, except_nos_set):
+        if not except_nos_set:
+            self.delete_all_rows(index)
+            return
+
+        table_name = self.get_table_name_by_index(index)
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+
+        try:
+            placeholders = ','.join(['?' for _ in except_nos_set])
+            query = f'DELETE FROM {table_name} WHERE no NOT IN ({placeholders})'
+            cursor.execute(query, list(except_nos_set))
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            cursor.close()
+
+    def reorder_no_field(self, index):
+        table_name = self.get_table_name_by_index(index)
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute(f'SELECT COUNT(*) FROM {table_name}')
+            count = cursor.fetchone()[0]
+
+            if count == 0:
+                return
+
+            cursor.execute("SELECT sqlite_version()")
+            version = cursor.fetchone()[0]
+            version_tuple = tuple(map(int, version.split('.')))
+
+            if version_tuple >= (3, 25, 0):
+                self.reorder_with_window_function(index, table_name, cursor)
+            else:
+                self.reorder_without_window_function(index, table_name, cursor)
+
+            conn.commit()
+
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            cursor.close()
+
+    @staticmethod
+    def reorder_with_window_function(index, table_name, cursor):
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = cursor.fetchall()
+        column_names = [col[1] for col in columns]
+
+        select_parts = ['id', 'ROW_NUMBER() OVER (ORDER BY id) as new_no']
+        for col in column_names:
+            if col not in ['id', 'no']:
+                select_parts.append(col)
+
+        temp_table = f'temp_{table_name}'
+        select_sql = f'SELECT {", ".join(select_parts)} FROM {table_name}'
+        cursor.execute(f'CREATE TEMPORARY TABLE {temp_table} AS {select_sql}')
+
+        cursor.execute(f'DELETE FROM {table_name}')
+
+        insert_columns = ['id', 'no'] + [col for col in column_names if col not in ['id', 'no']]
+        insert_sql = f'''
+                INSERT INTO {table_name} ({", ".join(insert_columns)})
+                SELECT {", ".join(select_parts)} FROM {temp_table}
+                ORDER BY new_no
+            '''
+        cursor.execute(insert_sql)
+        cursor.execute(f'DROP TABLE {temp_table}')
+
+    @staticmethod
+    def reorder_without_window_function(index, table_name, cursor):
+        cursor.execute(f'SELECT id FROM {table_name} ORDER BY id')
+        ids = cursor.fetchall()
+
+        for new_no, (row_id,) in enumerate(ids, 1):
+            cursor.execute(f'UPDATE {table_name} SET no = ? WHERE id = ?', (new_no, row_id))
+
+    @staticmethod
+    def get_table_name_by_index(index):
+        table_names = ['received_data', 'user_actions', 'system_events']
+        return table_names[index]
+
+    def get_last_no(self, index):
+        table_name = self.get_table_name_by_index(index)
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute(f'SELECT MAX(no) FROM {table_name}')
+            result = cursor.fetchone()
+            return result[0] if result and result[0] else 0
+        except Exception as e:
+            return 0
+        finally:
+            cursor.close()
+
+    def get_all_data_sync(self, index):
+        if index == 0:
+            return self.select_recv_data_sync()
+        elif index == 1:
+            return self.select_user_actions_sync()
+        elif index == 2:
+            return self.select_system_events_sync()
+        return []
+
+    def get_data_by_nos_sync(self, index, nos_set):
+        if not nos_set:
+            return []
+
+        placeholders = ','.join(['?' for _ in nos_set])
+
+        if index == 0:
+            query = f'''
+                SELECT no, timestamp, address, channels, hid, data, raw_data, detector
+                FROM received_data 
+                WHERE no IN ({placeholders})
+                ORDER BY no
+            '''
+            rows = self.execute_query_sync(query, list(nos_set))
+            return [{
+                'no': row[0],
+                'timestamp': row[1],
+                'address': row[2],
+                'channels': row[3],
+                'hid': row[4],
+                'data': row[5],
+                'raw_data': list(row[6]) if row[6] else [],
+                'detector': row[7]
+            } for row in rows]
+
+        elif index == 1:
+            query = f'''
+                SELECT no, timestamp, action, payload, target_address, target_channels, target_hid
+                FROM user_actions 
+                WHERE no IN ({placeholders})
+                ORDER BY no
+            '''
+            rows = self.execute_query_sync(query, list(nos_set))
+            return [{
+                'no': row[0],
+                'timestamp': row[1],
+                'action': row[2],
+                'payload': row[3],
+                'target_address': row[4],
+                'target_channels': row[5],
+                'target_hid': row[6]
+            } for row in rows]
+
+        elif index == 2:
+            query = f'''
+                SELECT no, timestamp, event, detail
+                FROM system_events 
+                WHERE no IN ({placeholders})
+                ORDER BY no
+            '''
+            rows = self.execute_query_sync(query, list(nos_set))
+            return [{
+                'no': row[0],
+                'timestamp': row[1],
+                'event': row[2],
+                'detail': row[3]
+            } for row in rows]
+
+        return []
+
+    def get_data_except_nos_sync(self, index, except_nos_set):
+        if except_nos_set is None:
+            except_nos_set = set()
+
+        if not except_nos_set:
+            return self.get_all_data_sync(index)
+
+        except_list = list(except_nos_set)
+        placeholders = ','.join(['?' for _ in except_list])
+
+        if index == 0:
+            query = f'''
+                SELECT no, timestamp, address, channels, hid, data, raw_data, detector
+                FROM received_data 
+                WHERE no NOT IN ({placeholders})
+                ORDER BY no
+            '''
+            rows = self.execute_query_sync(query, except_list)
+            return [{
+                'no': row[0],
+                'timestamp': row[1],
+                'address': row[2],
+                'channels': row[3],
+                'hid': row[4],
+                'data': row[5],
+                'raw_data': list(row[6]) if row[6] else [],
+                'detector': row[7]
+            } for row in rows]
+
+        elif index == 1:
+            query = f'''
+                SELECT no, timestamp, action, payload, target_address, target_channels, target_hid
+                FROM user_actions 
+                WHERE no NOT IN ({placeholders})
+                ORDER BY no
+            '''
+            rows = self.execute_query_sync(query, except_list)
+            return [{
+                'no': row[0],
+                'timestamp': row[1],
+                'action': row[2],
+                'payload': row[3],
+                'target_address': row[4],
+                'target_channels': row[5],
+                'target_hid': row[6]
+            } for row in rows]
+
+        elif index == 2:
+            query = f'''
+                SELECT no, timestamp, event, detail
+                FROM system_events 
+                WHERE no NOT IN ({placeholders})
+                ORDER BY no
+            '''
+            rows = self.execute_query_sync(query, except_list)
+            return [{
+                'no': row[0],
+                'timestamp': row[1],
+                'event': row[2],
+                'detail': row[3]
+            } for row in rows]
+
+        return []
+
+    def execute_query_sync(self, query, params=None):
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+            return cursor.fetchall()
+        except Exception as e:
+            self.insert_system_event_async(
+                self.data_ft.form_timestamp_str_in_year(),
+                'DB Query Error',
+                str(e)
+            )
+            return []
+        finally:
+            cursor.close()

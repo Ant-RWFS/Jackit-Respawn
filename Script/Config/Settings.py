@@ -11,15 +11,17 @@ class AppConfig:
         self.RESC_PATH = self.ROOT / 'Asset' / 'Resc'
         self.VIDEO_PATH = self.ROOT / 'Asset' / 'Video'
         self.THEME_PATH = self.ROOT / 'Asset' / 'Theme'
-        self.FIRMWARE_PATH = self.ROOT / 'Asset' / 'Firmware'
+        self.DEVICE_PATH = self.ROOT / 'Asset' / 'Device'
         self.DATABASE_PATH = self.ROOT / 'Asset' / 'Database'
+        self.PLUGIN_PATH = self.ROOT / 'Plugin'
         self.INFO = self.init_info()
         self.FONT = self.init_font()
         self.RESC = self.init_resc()
         self.VIDEO = self.init_video()
         self.APPEARANCE = self.init_appearance()
-        self.FIRMWARE = self.init_firmware()
+        self.DEVICE = self.init_device()
         self.DATABASE = self.init_database()
+        self.PLUGIN = self.init_plugin()
         self.FIXED_COLORS = self.init_fixed_colors()
         self.FIXED_STYLES = self.init_fixed_styles()
 
@@ -70,20 +72,28 @@ class AppConfig:
         self.RESC_PATH = self.ROOT / 'Asset' / 'Resc'
         self.VIDEO_PATH = self.ROOT / 'Asset' / 'Video'
         self.THEME_PATH = self.ROOT / 'Asset' / 'Theme'
-        self.FIRMWARE_PATH = self.ROOT / 'Asset' / 'Firmware'
+        self.DEVICE_PATH = self.ROOT / 'Asset' / 'Device'
         self.DATABASE_PATH = self.ROOT / 'Asset' / 'Database'
+        self.PLUGIN_PATH = self.ROOT / 'Plugin'
         self.INFO = self.init_info()
         self.FONT = self.init_font()
         self.RESC = self.init_resc()
         self.VIDEO = self.init_video()
         self.APPEARANCE = self.init_appearance()
-        self.FIRMWARE = self.init_firmware()
+        self.DEVICE = self.init_device()
         self.DATABASE = self.init_database()
+        self.PLUGIN = self.init_plugin()
         self.FIXED_COLORS = self.init_fixed_colors()
         self.FIXED_STYLES = self.init_fixed_styles()
 
     def reload(self):
         self.init_config()
+
+    def reload_appearance(self):
+        self.APPEARANCE = self.init_appearance()
+
+    def reload_plugin(self):
+        self.PLUGIN = self.init_plugin()
 
     def init_info(self) -> dict:
         info = self.CONFIG['info']
@@ -206,17 +216,26 @@ class AppConfig:
             )
         }
 
-    def init_firmware(self) -> dict:
-        firmware_config = self.modulized_config(self.FIRMWARE_PATH, self.CONFIG['firmware'])
+    def init_device(self) -> dict:
+        device_config = self.modulized_config(self.DEVICE_PATH, self.CONFIG['device'])
         # need to be changed when building multidevice connection, because it uses 'current'
         return {
-            'name': firmware_config['name'],
-            'module': firmware_config['module'],
+            'name': device_config['name'],
+            'module': device_config['module'],
         }
 
     def init_database(self) -> dict:
         return {
             'log': self.DATABASE_PATH / 'Log.db'
+        }
+
+    def get_plugin_files(self, plugin_dict: str) -> list:
+        return [f.name for f in Path(self.PLUGIN_PATH / plugin_dict).glob('*.py')
+                if f.name != '__init__.py']
+
+    def init_plugin(self) -> dict:
+        return {
+            'hid': self.get_plugin_files('HID')
         }
 
     @staticmethod
@@ -237,7 +256,16 @@ class AppConfig:
                 font_family='headline',
                 size=self.FONT['size']['medium'],
                 color=ft.Colors.with_opacity(0.8, ft.Colors.GREY_800),
-            )
+            ),
+            'list_button': ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=0)
+            ),
+            'icon_button': ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=5),
+                color=ft.Colors.SURFACE,
+                bgcolor=ft.Colors.PRIMARY,
+                overlay_color=ft.Colors.ON_PRIMARY
+            ),
         }
 
     def read_hidmap(self):
@@ -250,6 +278,31 @@ class AppConfig:
         with open(path, 'r', encoding='utf-8') as f:
             return yaml.safe_load(f)
 
+    def read_hid_plugin(self, hid):
+        path = self.PLUGIN_PATH / 'HID' / hid
+        lines = []
+        with open(path, 'r', encoding='utf-8') as f:
+            for line in f:
+                lines.append(line.rstrip())
+        return lines
+
     def get_language_list(self):
         path = self.RESC_PATH / 'keymap'
         return [f.stem for f in path.glob("*.yml")]
+
+    def add_theme_style(self, file_name):
+        config = self.CONFIG
+        if file_name not in config['theme']['list']:
+            config['theme']['list'].append(file_name)
+        self.edit_config(config)
+        self.CONFIG = config
+        self.reload_appearance()
+
+    def remove_theme_style(self, index):
+        config = self.CONFIG
+        removed_theme = config['theme']['list'][index]
+        if removed_theme in config['theme']['list']:
+            config['theme']['list'].remove(removed_theme)
+        self.edit_config(config)
+        self.CONFIG = config
+        return removed_theme

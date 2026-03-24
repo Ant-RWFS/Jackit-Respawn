@@ -76,6 +76,30 @@ class Panel(AbstractUI):
         self.control.reset_font_family(type_index, family_index)
         self.page.update()
 
+    def add_theme_style_file(self, e):
+        self.file_op.import_yaml_file(e, callback=self.control.update_theme_style_option)
+
+    def delete_app_theme_confirm(self, e, index):
+        dialog = ft.AlertDialog(
+            modal=True,
+            content=ft.Text(f"{self.config.RESC['text']['delete']['content']} theme: "
+                            f"'{Path(self.config.APPEARANCE['list'][index]).stem}' ?"),
+            actions=[
+                ft.TextButton(f"{self.config.RESC['text']['cancel']}",
+                              on_click=lambda e: self.page.close(dialog)),
+                ft.TextButton(f"{self.config.RESC['text']['confirm']}",
+                              on_click=lambda e: self.delete_app_theme(e, index, dialog))
+            ],
+            actions_alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        )
+        self.page.open(dialog)
+
+    def delete_app_theme(self, e, index, dialog):
+        file_name = self.config.remove_theme_style(index)
+        self.file_op.delete_theme_file(file_name)
+        self.control.update_theme_style_option()
+        self.page.close(dialog)
+
 
 class Control(AbstractUI):
     def __init__(self, panel: Panel):
@@ -86,6 +110,7 @@ class Control(AbstractUI):
         self.appearance_divider = self.init_appearance_divider()
         self.appearance_labels = self.init_appearance_labels()
         # theme config
+        self.theme_style_option_buttons = self.init_theme_style_option_buttons()
         self.theme_style_options = self.init_theme_style_options()
         self.theme_style_button = self.init_theme_style_button()
         self.theme_style_config = self.init_theme_style_config()
@@ -99,15 +124,11 @@ class Control(AbstractUI):
         self.intro_skip_button = self.init_intro_skip_button()
         self.intro_video_config = self.init_intro_video_config()
 
-    @staticmethod
-    def truncate_text(text: str, max_length: int):
-        return text[:max_length] + ('...' if len(text) > max_length else '')
-
     def init_current_config_names(self):
         return {
             'theme': [
                 ft.Text(
-                    value=self.truncate_text(str(name), 20),
+                    value=self.data_ft.truncate_text(str(name), 20),
                     style=ft.TextThemeStyle.BODY_SMALL,
                 )
                 for name in [
@@ -118,14 +139,14 @@ class Control(AbstractUI):
             'font': {
                 'size': [
                     ft.Text(
-                        value=self.truncate_text(str(size), 10),
+                        value=self.data_ft.truncate_text(str(size), 10),
                         style=ft.TextThemeStyle.BODY_SMALL,
                     )
                     for size in self.config.FONT['size'].values()
                 ],
                 'family': [
                     ft.Text(
-                        value=self.truncate_text(str(name), 10),
+                        value=self.data_ft.truncate_text(str(name), 10),
                         style=ft.TextThemeStyle.BODY_SMALL,
                     )
                     for name in self.config.FONT['family'].values()
@@ -133,7 +154,8 @@ class Control(AbstractUI):
             }
         }
 
-    def init_appearance_bodies(self):
+    @staticmethod
+    def init_appearance_bodies():
         return [
             ft.Text(
                 value=label,
@@ -143,7 +165,8 @@ class Control(AbstractUI):
             ) for label in CONFIGS_ITEMS.keys()
         ]
 
-    def init_appearance_labels(self):
+    @staticmethod
+    def init_appearance_labels():
         return {
             category: [
                 ft.Text(
@@ -156,7 +179,8 @@ class Control(AbstractUI):
             for category, items in CONFIGS_ITEMS.items()
         }
 
-    def init_appearance_divider(self):
+    @staticmethod
+    def init_appearance_divider():
         return ft.Container(
             content=ft.Divider(
                 height=10,
@@ -187,30 +211,53 @@ class Control(AbstractUI):
             ]
         )
 
+    def init_add_theme_style_btn(self):
+        return ft.ElevatedButton(
+            expand=False,
+            content=ft.Text(
+                value=self.config.RESC['text']['config']['ap']['style']['add'],
+                theme_style=ft.TextThemeStyle.LABEL_SMALL
+            ),
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=0)),
+            width=200,
+            height=40,
+            on_click=lambda e: self.panel.add_theme_style_file(e)
+        )
+
+    def init_theme_style_option_buttons(self):
+        add_theme_style_btn = self.init_add_theme_style_btn()
+        controls = [
+            ft.ElevatedButton(
+                expand=False,
+                content=ft.Text(
+                    value=Path(item).stem if item else "unknown",
+                    theme_style=ft.TextThemeStyle.LABEL_SMALL,
+                ),
+                width=200,
+                height=40,
+                style=self.config.FIXED_STYLES['list_button'],
+                on_click=lambda e, idx=index: self.panel.reset_app_theme_style(idx),
+                on_long_press=lambda e, idx=index: self.panel.delete_app_theme_confirm(e, idx)
+            )
+            for index, item in enumerate(self.config.APPEARANCE['list'] or [])
+        ]
+        controls.append(add_theme_style_btn)
+        return controls
+
     def init_theme_style_options(self):
         return ft.Container(
-            height=200
-            if len(self.config.APPEARANCE['list']) > 5
-            else 40 * len(self.config.APPEARANCE['list']),
+            height=120,
             content=ft.Column(
-                controls=[
-                    ft.MenuItemButton(
-                        expand=False,
-                        content=ft.Text(
-                            value=Path(item).stem
-                            if item
-                            else "unknown",
-                            theme_style=ft.TextThemeStyle.LABEL_SMALL
-                        ),
-                        width=200,
-                        height=40,
-                        on_click=lambda e, idx=index: self.panel.reset_app_theme_style(idx)
-                    )
-                    for index, item in enumerate(self.config.APPEARANCE['list'] or [])
-                ],
-                scroll=ft.ScrollMode.AUTO
+                controls=self.theme_style_option_buttons,
+                scroll=ft.ScrollMode.AUTO,
+                spacing=0
             )
         )
+
+    def update_theme_style_option(self):
+        self.theme_style_option_buttons = self.init_theme_style_option_buttons()
+        self.theme_style_options.content.controls = self.theme_style_option_buttons
+        self.theme_style_options.update()
 
     def init_theme_style_button(self):
         return ft.MenuBar(
@@ -220,13 +267,13 @@ class Control(AbstractUI):
                 mouse_cursor={
                     ft.ControlState.HOVERED: ft.MouseCursor.WAIT,
                     ft.ControlState.DEFAULT: ft.MouseCursor.ZOOM_OUT,
-                },
+                }
             ),
             controls=[
                 ft.SubmenuButton(
                     content=self.current_config_names['theme'][0],
                     controls=[self.theme_style_options],
-                    width=200,
+                    width=200
                 )
             ]
         )
@@ -367,13 +414,13 @@ class Control(AbstractUI):
         self.page.theme = self.config.APPEARANCE['theme']
 
     def reset_font_size(self, type_index: int, size_index: int):
-        self.current_config_names['font']['size'][type_index].value = self.truncate_text(
+        self.current_config_names['font']['size'][type_index].value = self.data_ft.truncate_text(
             str(FONT_SIZES[size_index]), 10)
         self.page.theme = self.config.APPEARANCE['theme']
 
     def reset_font_family(self, type_index: int, family_index: int):
         type_key = CONFIGS_ITEMS['Font'][type_index].lower()
-        self.current_config_names['font']['family'][type_index].value = '*' + self.truncate_text(
+        self.current_config_names['font']['family'][type_index].value = '*' + self.data_ft.truncate_text(
             str(self.config.FONT['family'][type_key]), 9)
         self.reset_font_family_hint()
         self.page.theme = self.config.APPEARANCE['theme']

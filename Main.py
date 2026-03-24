@@ -28,7 +28,6 @@ class Application:
         self.app_registry.register('db_op', self.db_operator)
         self.app_registry.register('data_ft', self.data_ft)
 
-        self.db_operator = None
         self.hw_process = None
         self.App_UI = None
         self.page = None
@@ -38,17 +37,17 @@ class Application:
         try:
             self.hw_process = Hardware.Service(self.hw_cmd_queue, self.hw_evt_queue, USB)
             self.hw_process.start()
-            flet.app(lambda page: self.init_app(page, self.app_config))
+            flet.app(lambda page: self.init_app(page, self.app_config, self.data_ft, self.db_operator))
         except Exception as e:
             self.report_error(e)
         finally:
             self.cleanup()
 
-    def init_app(self, page: flet.Page, config: AppConfig):
+    def init_app(self, page: flet.Page, config: AppConfig, data_ft: Formatter, db_op: Operator):
         self.page = page
         self.running = True
 
-        self.App_UI = UI.Entity(page, config)
+        self.App_UI = UI.Entity(page, config, data_ft, db_op)
         self.App_UI.init()
         self.App_UI.intro.start()
 

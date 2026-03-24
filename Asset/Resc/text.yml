@@ -1,5 +1,8 @@
-cancel: 'CANCEL'
-confirm: 'CONFIRM'
+cancel: 'Cancel'
+confirm: 'Confirm'
+delete:
+  content: 'Are you sure about deleting'
+  log: 'Are you sure about deleting selected data?'
 hint:
   restart:
     config: '* marked item will be changed after restarting the application.'
@@ -17,3 +20,21 @@ hint:
       detect_time: 'Detection takes few seconds.'
   payload:
     enter: 'Enter Payload'
+config:
+  menu:
+    ap: 'Appearance'
+    dv: 'Device'
+    pg: 'Plugin'
+  ap:
+    style:
+      add: '+ Add Style File'
+  pg:
+    fpr:
+      add: '+ Add Fingerprint File'
+tooltip:
+  cc: 'clip and copy'
+diagram:
+  signal:
+    x: 'Index'
+    y: 'Value'
+    title: 'Signal Diagram'

@@ -1,16 +1,14 @@
-from Script.Config.Settings import AppConfig
 from Script.UI.Layout import AppLayout
 from Script import Publisher, Globals
-from Script.Database.SQLite import Operator
 
 
 class Entity:
-    def __init__(self, page, config):
+    def __init__(self, page, config, data_ft, db_op):
         self.globals = Globals.AppRegistry
         self.config = config
         self.page = page
         self.globals.register('page', self.page)
-        self.file_op = Publisher.File(self.page, self.config)
+        self.file_op = Publisher.File(self.page, self.config, data_ft, db_op)
         self.globals.register('file_op', self.file_op)
 
         self.main_layout = AppLayout.Panel()
