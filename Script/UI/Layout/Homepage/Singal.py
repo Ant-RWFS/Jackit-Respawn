@@ -1,6 +1,8 @@
 import base64
 from io import BytesIO
+import matplotlib
 import matplotlib.pyplot as plt
+matplotlib.use('Agg')
 import flet as ft
 
 
