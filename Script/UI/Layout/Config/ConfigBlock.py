@@ -1,5 +1,5 @@
 import flet as ft
-from . import Appearance, Device, Plugin
+from . import Appearance, Plugin
 from Script.Abstracts import AbstractUI
 
 
@@ -42,7 +42,6 @@ class Control(AbstractUI):
         self.panel = panel
         self.selected_index = 0
         self.appearance_layout = Appearance.Panel().layout
-        self.device_layout = Device.Panel().layout
         self.plugin_layout = Plugin.Panel().layout
         self.config_menu_buttons = self.init_config_menu_buttons()
         self.config_menu = self.init_config_menu()
@@ -66,8 +65,7 @@ class Control(AbstractUI):
             )
         labels = self.config.RESC['text']['config']['menu']
         return [menu_button(0, labels['ap']),
-                menu_button(1, labels['dv']),
-                menu_button(2, labels['pg'])]
+                menu_button(1, labels['pg'])]
 
     def updated_config_menu_button(self, index):
         self.selected_index = index
@@ -90,7 +88,6 @@ class Control(AbstractUI):
         return ft.Column(
             controls=[
                 self.appearance_layout,
-                self.device_layout,
                 self.plugin_layout,
             ],
             alignment=ft.alignment.top_left,

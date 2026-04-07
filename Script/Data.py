@@ -1,4 +1,7 @@
-import re, ast, json, time
+import ast
+import json
+import re
+import time
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -90,25 +93,69 @@ class Formatter:
         return text[:max_length] + ('...' if len(text) > max_length else '')
 
     @staticmethod
-    def validate_hid_plugin(content, filename):
+    def validate_plugin(content, filename, plugin_type: str):
+        validation_rules = {
+            'Device': {
+                'class_name': 'Driver',
+                'required_methods': [
+                    '__init__', 'init_device', 'execute_command',
+                    'activate_promiscuous_mode', 'activate_promiscuous_mode_generic',
+                    'activate_sniffer_mode', 'activate_tone_test_mode', 'recv_payload',
+                    'send_payload', 'send_ack_payload', 'send_payload_generic',
+                    'get_channel', 'set_channel', 'activate_LNA'
+                ],
+                'required_attributes': ['VENDOR_ID', 'PRODUCT_ID', 'ID'],
+                'allowed_imports': ['usb', 'fcntl']
+            },
+            'HID': {
+                'class_name': 'HID',
+                'required_methods': [
+                    '__init__', 'key', 'frame', 'build_frames', 'fingerprint', 'description'
+                ],
+                'required_attributes': [],
+                'allowed_imports': []
+            }
+        }
+
+        if plugin_type not in validation_rules:
+            return False, f"Unknown plugin type: {plugin_type}"
+        rules = validation_rules[plugin_type]
+
         try:
             tree = ast.parse(content)
-            required_elements = {
-                'class': 'HID',
-                'methods': ['__init__', 'key', 'frame', 'build_frames', 'fingerprint', 'description']
-            }
-            hid_class = None
+            plugin_class = None
             for node in ast.walk(tree):
-                if isinstance(node, ast.ClassDef) and node.name == 'HID':
-                    hid_class = node
+                if isinstance(node, ast.ClassDef) and node.name == rules['class_name']:
+                    plugin_class = node
                     break
-            if not hid_class:
-                return False, "Missing required class 'HID'"
-            class_methods = [method.name for method in hid_class.body if isinstance(method, ast.FunctionDef)]
-            class_methods += [method.name for method in hid_class.body if isinstance(method, ast.FunctionDef)]
-            missing_methods = [m for m in required_elements['methods'] if m not in class_methods]
+            if not plugin_class:
+                return False, f"Missing required class '{rules['class_name']}'"
+            class_methods = [
+                method.name for method in plugin_class.body
+                if isinstance(method, ast.FunctionDef)
+            ]
+            missing_methods = [
+                method for method in rules['required_methods']
+                if method not in class_methods
+            ]
             if missing_methods:
                 return False, f"Missing required methods: {', '.join(missing_methods)}"
+            if rules['required_attributes']:
+                class_attributes = []
+                for node in plugin_class.body:
+                    if isinstance(node, ast.Assign):
+                        for target in node.targets:
+                            if isinstance(target, ast.Name):
+                                class_attributes.append(target.id)
+                    elif isinstance(node, ast.AnnAssign):
+                        if isinstance(node.target, ast.Name):
+                            class_attributes.append(node.target.id)
+                missing_attributes = [
+                    attr for attr in rules['required_attributes']
+                    if attr not in class_attributes
+                ]
+                if missing_attributes:
+                    return False, f"Missing required class attributes: {', '.join(missing_attributes)}"
             imports = []
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import):
@@ -117,14 +164,14 @@ class Formatter:
                 elif isinstance(node, ast.ImportFrom):
                     if node.module:
                         imports.append(node.module)
-            forbidden_imports = []
-            for imp in imports:
-                if not imp.startswith('.'):
-                    if imp not in ['.', '__future__', ]:
-                        forbidden_imports.append(imp)
+            allowed_imports = rules['allowed_imports'] + ['.', '__future__']
+            forbidden_imports = [
+                imp for imp in imports
+                if not imp.startswith('.') and imp not in allowed_imports
+            ]
             if forbidden_imports:
                 return False, f"Forbidden imports detected: {', '.join(forbidden_imports)}"
-            return True, "Valid plugin"
+            return True, f"Valid {plugin_type} plugin"
         except SyntaxError as e:
             return False, f"Syntax error: {e}"
         except Exception as e:

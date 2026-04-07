@@ -1,36 +1,35 @@
 class HID(object):
     def __init__(self, address, payload):
         self.address = address
+        self.payload = list(payload) if payload else [0] * 15
         self.device_vendor = 'Dell'
 
     def key(self, payload, key):
-        payload[2] = key['hid']
-        return payload
+        new_payload = list(payload)
+        new_payload[0] ^= key['mod']
+        new_payload[2] ^= key['hid']
+        return new_payload
 
-    # def frame(self, key={'hid': 0, 'mod': 0}):
-    #     return self.key(self.payload_template[:], key)
-    #
-    # def build_frames(self, attack):
-        # for i in range(0, len(attack)):
-        #     key = attack[i]
-        #     key['frames'] = []
-        #
-        #     if i == 0:
-        #         for _ in range(5):
-        #             key['frames'].append([self.frame(), 5])
-        #
-        #     if key['hid'] or key['mod']:
-        #         key['frames'].append([self.frame(key), 5])
-        #         key['frames'].append([self.frame(), 5])
-        #     elif key['sleep']:
-        #         count = int(key['sleep']) / 10
-        #         for i in range(0, int(count)):
-        #             key['frames'].append([self.frame(), 10])
+    def frame(self, key=None):
+        if key is None:
+            key = {'hid': 0, 'mod': 0}
+        return self.key(self.payload, key)
+
+    def build_frames(self, attack):
+        for i in range(len(attack)):
+            key = attack[i]
+            key['frames'] = []
+            if key.get('hid') or key.get('mod'):
+                key['frames'].append([self.frame(key), 10])
+                key['frames'].append([self.payload, 10])
+            elif key['sleep']:
+                count = int(key['sleep']) / 10
+                for i in range(0, int(count)):
+                    key['frames'].append([self.frame(), 10])
 
     @classmethod
     def fingerprint(cls, p):
-        if len(p) == 15 and p[0] == 0x06:
-            print(p)
+        if len(p) == 15:
             return cls
         return None
 

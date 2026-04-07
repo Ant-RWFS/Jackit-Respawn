@@ -1,0 +1,757 @@
+@startuml classes_MJPP
+set namespaceSeparator none
+class "AbstractDriver" as MJPP.Script.Abstracts.AbstractDriver {
+  {abstract}activate_promiscuous_mode()
+  {abstract}activate_promiscuous_mode_generic()
+  {abstract}activate_sniffer_mode()
+  {abstract}activate_tone_test_mode()
+  {abstract}avctivate_LNA()
+  {abstract}execute_command()
+  {abstract}get_channel()
+  {abstract}init_device()
+  {abstract}recv_payload()
+  {abstract}send_ack_payload()
+  {abstract}send_payload()
+  {abstract}send_payload_generic()
+  {abstract}set_channel()
+}
+class "AbstractUI" as MJPP.Script.Abstracts.AbstractUI {
+  cmd
+  config
+  data_ft
+  db_op
+  evt
+  evt_bcst
+  file_op
+  page
+}
+class "AppConfig" as MJPP.Script.Config.Settings.AppConfig {
+  APPEARANCE : dict
+  CONFIG
+  DATABASE : dict
+  DATABASE_PATH
+  DEVICE_PATH
+  FIXED_COLORS : dict
+  FIXED_STYLES : dict
+  FONT : dict
+  FONT_PATH
+  INFO : dict
+  PLUGIN : dict
+  PLUGIN_PATH
+  RESC : dict
+  RESC_PATH
+  ROOT : Path
+  THEME_PATH
+  VIDEO : dict
+  VIDEO_PATH
+  add_theme_style(file_name)
+  config() -> dict
+  edit_config(edit_data)
+  get_language_list()
+  get_plugin_files(plugin_dict: str) -> list
+  init_appearance() -> dict
+  init_config()
+  init_database() -> dict
+  init_fixed_colors() -> dict
+  init_fixed_styles() -> dict
+  init_font() -> dict
+  init_info() -> dict
+  init_plugin() -> dict
+  init_resc() -> dict
+  init_video() -> dict
+  modulized_config(resc_path, config_path) -> dict
+  read_hidmap()
+  read_keymap(language)
+  read_plugin(dict_name, file_name)
+  read_resc(resc)
+  reload()
+  reload_appearance()
+  reload_plugin()
+  remove_theme_style(index)
+  root()
+}
+class "AppRegistry" as MJPP.Script.Globals.AppRegistry {
+  instance : NoneType
+  registry : Dict[str, Any]
+  clear() -> None
+  get(name: str) -> Any
+  register(name: str, obj: Any) -> None
+}
+class "Application" as MJPP.Main.Application {
+  App_UI : Entity, NoneType
+  app_config : AppConfig
+  app_registry
+  data_ft
+  db_operator
+  evt_bcst
+  hw_cmd_queue
+  hw_evt_queue
+  hw_process : NoneType
+  page : NoneType
+  running : bool
+  ui_cmd_queue
+  cleanup()
+  command_hardware(type, vid, pid, devices, payload, mode)
+  command_listener()
+  event_listener()
+  init_app(page: flet.Page, config: AppConfig, data_ft: Formatter, db_op: Operator)
+  report_error(error)
+  run()
+}
+class "Control" as MJPP.Script.UI.Layout.AppLayout.Control {
+  panel
+  on_error_event(event: USBEvent)
+  on_usb_event(event: USBEvent)
+  subscribe_event()
+}
+class "Control" as MJPP.Script.UI.Layout.Intro.Control {
+  intro_video : Video
+  panel
+  skip_button : Button
+  init_intro_video()
+  init_skip_button()
+}
+class "Control" as MJPP.Script.UI.Layout.Workbench.Control {
+  blocks : Stack
+  conf_block : Panel
+  conf_panel : Row
+  home_block : Panel
+  home_panel : Row
+  log_block : Panel
+  log_panel : Row
+  panel
+  switch_bar : Tabs
+  init_blocks()
+  init_switch_bar()
+}
+class "Control" as MJPP.Script.UI.Layout.Config.Appearance.Control {
+  appearance_bodies
+  appearance_divider : Container
+  appearance_labels
+  current_config_names : dict
+  font_config : Column
+  font_family_buttons
+  font_size_buttons
+  intro_skip_button : CupertinoSlidingSegmentedButton
+  intro_video_config : Row
+  panel
+  theme_mode_button : CupertinoSlidingSegmentedButton
+  theme_mode_config : Row
+  theme_style_button : MenuBar
+  theme_style_config : Row
+  theme_style_option_buttons
+  theme_style_options : Container
+  init_add_theme_style_btn()
+  init_appearance_bodies()
+  init_appearance_divider()
+  init_appearance_labels()
+  init_current_config_names()
+  init_font_config()
+  init_font_family_buttons()
+  init_font_family_options(type_index: int)
+  init_font_size_buttons()
+  init_font_size_options(type_index: int)
+  init_intro_skip_button()
+  init_intro_video_config()
+  init_theme_mode_button()
+  init_theme_mode_config()
+  init_theme_style_button()
+  init_theme_style_config()
+  init_theme_style_option_buttons()
+  init_theme_style_options()
+  reset_font_family(type_index: int, family_index: int)
+  reset_font_family_hint()
+  reset_font_size(type_index: int, size_index: int)
+  reset_theme_mode()
+  reset_theme_style()
+  update_theme_style_option()
+}
+class "Control" as MJPP.Script.UI.Layout.Config.ConfigBlock.Control {
+  appearance_layout : Container
+  config_divider : VerticalDivider
+  config_menu : Column
+  config_menu_buttons : list
+  config_panels : Column
+  panel
+  plugin_layout : Container
+  selected_index : int
+  init_config_divider()
+  init_config_menu()
+  init_config_menu_buttons()
+  init_config_panels()
+  updated_config_menu_button(index)
+}
+class "Control" as MJPP.Script.UI.Layout.Config.Plugin.Control {
+  driver_list : Container
+  driver_list_window : Row
+  driver_registry_button : IconButton
+  driver_registry_config : Row
+  fpr_list : Container
+  fpr_list_window : Row
+  fpr_registry_button : IconButton
+  fpr_registry_config : Row
+  panel
+  plugin_bodies
+  plugin_dicts : list
+  plugin_divider : Container
+  plugin_labels
+  driver_list_content()
+  hid_list_content()
+  init_driver_list()
+  init_driver_list_window()
+  init_driver_registry_button()
+  init_driver_registry_config()
+  init_fpr_list()
+  init_fpr_list_window()
+  init_fpr_registry_button()
+  init_fpr_registry_config()
+  init_plugin_bodies()
+  init_plugin_divider()
+  init_plugin_labels()
+  reset_driver_list()
+  reset_hid_list()
+}
+class "Control" as MJPP.Script.UI.Layout.Homepage.DeviceOperator.Control {
+  attack_confirm_btn : MenuItemButton
+  attack_mode_btn : SubmenuButton
+  attack_payload_btn : SubmenuButton
+  data_diagram
+  device_output_window : Container
+  device_recv_detail : Container
+  device_recv_detail_dict : dict
+  device_recv_header_bar : Container
+  device_recv_list : Column
+  device_recv_window : Row
+  input_window : Container
+  output_window : Row
+  panel
+  payload_action_bar : Container
+  payload_input_window : TextField
+  payload_language_btn : SubmenuButton
+  payload_mode_btn : SubmenuButton
+  recv_list_reset_btn : MenuItemButton
+  scan_confirm_btn : MenuItemButton
+  selected_device : NoneType
+  selected_vid_pid : NoneType
+  attack_bar_btn_text(text)
+  attack_bar_sub_btn(icon, text, handler)
+  device_recv_data_bar(actual_data, display_data)
+  format_device_data(actual_data)
+  init_attack_confirm_btn()
+  init_attack_mode_btn()
+  init_attack_payload_btn()
+  init_device_output_window()
+  init_device_recv_detail()
+  init_device_recv_detail_dict()
+  init_device_recv_header_bar()
+  init_device_recv_list()
+  init_device_recv_window()
+  init_input_window()
+  init_output_window()
+  init_payload_action_bar()
+  init_payload_input_window()
+  init_payload_language_btn()
+  init_payload_mode_btn()
+  init_recv_list_reset_btn()
+  init_scan_confirm_btn()
+  on_attack_finish(event: USBEvent)
+  on_error(event: USBEvent)
+  on_scan_finish(event: USBEvent)
+  on_usb_receive(event: USBEvent)
+  subscribe_event()
+  update_current_usb_id(selected)
+  update_current_usb_id_on_delete(selected)
+}
+class "Control" as MJPP.Script.UI.Layout.Homepage.HomeBlock.Control {
+  device_cards : dict
+  device_info_btn_list : ListView
+  device_info_display_btn : Container
+  device_info_empty_hint : Column
+  device_info_view : Row
+  device_info_width : int
+  device_op
+  device_op_layout : Container
+  is_device_info_expanded : bool
+  panel
+  selected_vid_pid : NoneType, tuple
+  init_device_info_btn_list()
+  init_device_info_display_btn()
+  init_device_info_empty_hint()
+  init_device_info_view()
+  on_device_selected(vid, pid)
+  on_usb_add(vid, pid)
+  on_usb_event(event: USBEvent)
+  on_usb_remove(vid, pid)
+  refresh_buttons()
+  registered_usb_button(vid, pid)
+  toggle_sidebar(e)
+}
+class "Control" as MJPP.Script.UI.Layout.Log.LogBlock.Control {
+  current_page_text : Text
+  current_row_checkboxes : list
+  log_operation_btn : SubmenuButton
+  log_panel : Column
+  panel
+  recv_data_table : DataTable
+  selected_row : list
+  selected_row_counts : list
+  system_events_table : DataTable
+  table_checkboxes : list
+  table_page_controller : Row
+  table_tab_bar : Tabs
+  table_window : Container
+  tables : Stack
+  total_row_counts : list
+  unselected_row : list
+  user_actions_table : DataTable
+  init_current_page_text()
+  init_log_operation_btn()
+  init_log_panel()
+  init_recv_data_table()
+  init_system_events_table()
+  init_table_page_controller()
+  init_table_tab_bar()
+  init_table_window()
+  init_tables()
+  init_user_actions_table()
+  recording_checkbox(data, index)
+  recv_data_row(data, index)
+  system_events_row(data, index)
+  user_actions_row(data, index)
+}
+class "Diagram" as MJPP.Script.UI.Layout.Homepage.Singal.Diagram {
+  config
+  page
+  signal_list : NoneType, list
+  src_base64
+  diagram_layout(data)
+  init_placeholder()
+  update_diagram(data: list)
+}
+class "Driver" as MJPP.Plugin.Device.nrf-research-firmware.Driver {
+  ID : str
+  PRODUCT_ID : int
+  VENDOR_ID : int
+  device : NoneType
+  product_id : int
+  vendor_id : int
+  activate_LNA()
+  activate_promiscuous_mode(prefix)
+  activate_promiscuous_mode_generic(prefix, rate)
+  activate_sniffer_mode(address)
+  activate_tone_test_mode()
+  execute_command(command, data)
+  get_channel()
+  init_device(index)
+  recv_payload()
+  send_ack_payload(payload)
+  send_payload(payload, timeout, retransmits)
+  send_payload_generic(payload, address)
+  set_channel(channel)
+}
+class "DriverRegistry" as MJPP.Script.Globals.DriverRegistry {
+  drivers : dict
+  vid_pid_set : set
+  discover_drivers()
+  discover_vid_pid_set()
+}
+class "DuckyParser" as MJPP.Script.Device.Operator.Payload.DuckyParser {
+  blank_entry
+  hid_map
+  script
+  char_to_hid(char)
+  parse()
+}
+class "Entity" as MJPP.Script.UI.UI.Entity {
+  config
+  file_op : File
+  globals
+  intro : Panel
+  main_control : Control
+  main_layout : Panel
+  page
+  workbench : Panel
+  init()
+}
+class "EventBroadcaster" as MJPP.Script.Publisher.EventBroadcaster {
+  lock : lock
+  subscribers : dict
+  get_timestamp()
+  notify_subscribers(event: USBEvent)
+  publish(event: USBEvent)
+  subscribe(callback, event_type)
+  unsubscribe(event_type, callback)
+}
+class "File" as MJPP.Script.Publisher.File {
+  config
+  data_ft
+  db_op
+  file_open_picker : FilePicker
+  file_save_picker : FilePicker
+  page : Page
+  delete_file(file_name, file_path, callback)
+  delete_plugin_file(dict_name: str, file_name: str, callback)
+  delete_theme_file(file_name: str)
+  export_all_log_data(index)
+  export_data_thread(index, mode, exclude_nos, include_nos, file_path)
+  export_log_data_exclude_nos(index, nos)
+  export_log_data_include_nos(index, nos)
+  handle_export(e: ft.FilePickerResultEvent, index, mode, exclude_nos, include_nos)
+  handle_plugin_import(e: ft.FilePickerResultEvent, callback, dict_name: str)
+  handle_theme_import(e: ft.FilePickerResultEvent, callback)
+  import_plugin_file(e, dict_name, callback)
+  import_yaml_file(e, callback)
+  init()
+  open_file(e, extensions: list, content_widget)
+  read_file(e: ft.FilePickerResultEvent, text: ft.TextField)
+  save_file(e, name: str, extensions: list, content_widget)
+  write_file(e: ft.FilePickerResultEvent, content_widget)
+  write_to_excel(data_list, file_path, sheet_name)
+}
+class "FingerprintRegistry" as MJPP.Script.Globals.FingerprintRegistry {
+  fingerprints : dict
+  discover()
+}
+class "Formatter" as MJPP.Script.Data.Formatter {
+  check_array_structure(text)
+  check_brackets_pair(text)
+  data_to_clipboard(data: str)
+  dict_to_json(data, ensure_ascii, indent)
+  form_address_list(address_list, sep)
+  form_channels_list(channels_list, sep)
+  form_hex_list(data, sep)
+  form_hid_list(hid_list, sep)
+  form_list(data, sep)
+  form_timestamp_str_in_date()
+  form_timestamp_str_in_hour()
+  form_timestamp_str_in_year()
+  hex_string_to_dec_list(hex_string)
+  hex_to_dec_string(hex_str, sep)
+  raw_data_to_json(raw_data, ensure_ascii, indent)
+  raw_payload_to_list(payload)
+  re_parse_payload(payload)
+  re_raw_payload(payload)
+  truncate_text(text: str, max_length: int)
+  validate_plugin(content, filename, plugin_type: str)
+}
+class "HID" as MJPP.Plugin.HID.amazon.HID {
+  address
+  device_vendor : str
+  payload_template : list
+  build_frames(attack)
+  description()
+  fingerprint(p)
+  frame(key)
+  key(payload, key)
+}
+class "HID" as MJPP.Plugin.HID.dell.HID {
+  address
+  device_vendor : str
+  payload : list
+  build_frames(attack)
+  description()
+  fingerprint(p)
+  frame(key)
+  key(payload, key)
+}
+class "HID" as MJPP.Plugin.HID.logitech.HID {
+  address
+  device_vendor : str
+  hello : list
+  keepalive : list
+  payload_template : list
+  build_frames(attack)
+  checksum(payload)
+  description()
+  fingerprint(p)
+  frame(key)
+  key(payload, key)
+}
+class "HID" as MJPP.Plugin.HID.microsoft.HID {
+  address
+  device_vendor : str
+  payload_template
+  sequence_num : int
+  build_frames(attack)
+  checksum(payload)
+  description()
+  fingerprint(p)
+  frame(key)
+  key(payload, key)
+  sequence(payload)
+}
+class "HID" as MJPP.Plugin.HID.microsoft_enc.HID {
+  address
+  device_vendor : str
+  payload_template
+  sequence_num : int
+  description()
+  fingerprint(p)
+  frame(key)
+  xor_crypt(payload)
+}
+class "HIDmapReader" as MJPP.Script.Device.Operator.Payload.HIDmapReader {
+  data
+}
+class "KeymapReader" as MJPP.Script.Device.Operator.Payload.KeymapReader {
+  data
+}
+class "Operator" as MJPP.Script.Database.SQLite.Operator {
+  bcst
+  config
+  data_ft
+  database_path
+  executor : ThreadPoolExecutor
+  local : _local
+  delete_all_rows(index)
+  delete_all_rows_async(index, callback)
+  delete_rows_by_nos(index, nos_set)
+  delete_rows_by_nos_async(index, nos_set, callback)
+  delete_rows_except_nos(index, except_nos_set)
+  delete_rows_except_nos_async(index, except_nos, callback)
+  execute_query_sync(query, params)
+  get_all_data_sync(index)
+  get_data_by_nos_sync(index, nos_set)
+  get_data_except_nos_sync(index, except_nos_set)
+  get_db_connection()
+  get_last_no(index)
+  get_table_count(cursor, table_name)
+  get_table_name_by_index(index)
+  get_table_total_count_async(index, callback)
+  init_log_db()
+  init_log_db_for_action()
+  init_log_db_for_recv()
+  init_log_db_for_system()
+  init_recv_data_table(conn)
+  init_system_events_table(conn)
+  init_user_action_table(conn)
+  insert_recv_data(timestamp, address, channels, hid, data, raw_data, detector)
+  insert_recv_data_async(timestamp, address, channels, hid, data, raw_data, detector)
+  insert_system_event(timestamp, event, detail)
+  insert_system_event_async(timestamp, event, detail)
+  insert_user_action(timestamp, action, payload, target_address, target_channels, target_hid)
+  insert_user_action_async(timestamp, action, payload, target_address, target_channels, target_hid)
+  on_attack_finish(event)
+  on_error(event)
+  on_recv_data(event)
+  on_scan_finish(event)
+  reorder_no_field(index)
+  reorder_with_window_function(index, table_name, cursor)
+  reorder_without_window_function(index, table_name, cursor)
+  select_data(query, start_no, end_no, limit, offset, order_by, order_dir)
+  select_data_by_table_index(index, callback, start_no, end_no, limit, offset, order_by, order_dir)
+  select_recv_data(callback, start_no, end_no, limit, offset, order_by, order_dir)
+  select_recv_data_async(callback, start_no, end_no, limit, offset, order_by, order_dir)
+  select_recv_data_sync(start_no, end_no, limit, offset, order_by, order_dir)
+  select_system_events(callback, start_no, end_no, limit, offset, order_by, order_dir)
+  select_system_events_async(callback, start_no, end_no, limit, offset, order_by, order_dir)
+  select_system_events_sync(start_no, end_no, limit, offset, order_by, order_dir)
+  select_user_actions(callback, start_no, end_no, limit, offset, order_by, order_dir)
+  select_user_actions_async(callback, start_no, end_no, limit, offset, order_by, order_dir)
+  select_user_actions_sync(start_no, end_no, limit, offset, order_by, order_dir)
+  subscribe_event()
+}
+class "Panel" as MJPP.Script.UI.Layout.AppLayout.Panel {
+  intro
+  layout : Stack
+  workbench
+  init_layout()
+}
+class "Panel" as MJPP.Script.UI.Layout.Intro.Panel {
+  control
+  intro_elapsed_time : int
+  intro_running : bool
+  intro_start_time : NoneType
+  layout : Stack
+  workbench
+  close_intro_video(e)
+  init_layout()
+  reset_intro()
+  start()
+  start_intro(interval)
+  stop_intro()
+}
+class "Panel" as MJPP.Script.UI.Layout.Workbench.Panel {
+  control
+  layout : Column
+  hide_blocks()
+  init_layout()
+  show_block(index)
+  switch_page(e)
+}
+class "Panel" as MJPP.Script.UI.Layout.Config.Appearance.Panel {
+  control
+  layout : Container
+  add_theme_style_file(e)
+  delete_app_theme(e, index, dialog)
+  delete_app_theme_confirm(e, index)
+  init_layout()
+  reset_app_font_family(type_index: int, family_index: int)
+  reset_app_font_size(type_index: int, size_index: int)
+  reset_app_theme_mode()
+  reset_app_theme_style(index: int)
+  reset_intro_skip_config()
+}
+class "Panel" as MJPP.Script.UI.Layout.Config.ConfigBlock.Panel {
+  control
+  layout : Row
+  init_layout()
+  reset_config_panel()
+  switch_config_panel(index: int)
+  update_config_menu_button(index)
+}
+class "Panel" as MJPP.Script.UI.Layout.Config.Plugin.Panel {
+  control
+  layout : Container
+  delete_plugin(e, dict_name, file_name, dialog, callback)
+  delete_plugin_confirm(e, dict_name, file_name, callback)
+  display_registered_plugin(e, dict_name, file_name)
+  init_layout()
+  register_plugin(e, dict_name, callback)
+  reload_device()
+}
+class "Panel" as MJPP.Script.UI.Layout.Homepage.DeviceOperator.Panel {
+  control
+  layout : Container
+  attack_confirm(e)
+  copy_data_to_clipboard(e: ft.TapEvent, content)
+  display_diagram_dialog(e, diagram)
+  display_recv_detail(e, data, detail)
+  init_layout()
+  payload_re_check(payload)
+  payload_reformat(payload)
+  reset_attack_confirm_btn()
+  reset_recv_list(e)
+  reset_scan_confirm_btn()
+  scan_confirm(e)
+  set_attack_mode(e, name, mode)
+  set_payload_language(e, name, language)
+  set_payload_mode(e, name, mode)
+  start_animation()
+  update_attack_confirm_btn()
+  update_scan_confirm_btn()
+}
+class "Panel" as MJPP.Script.UI.Layout.Homepage.HomeBlock.Panel {
+  control
+  layout : Row
+  init_layout()
+}
+class "Panel" as MJPP.Script.UI.Layout.Log.LogBlock.Panel {
+  control
+  layout : Row
+  copy_data_cell_to_clipboard(cell)
+  copy_raw_data_to_clipboard(raw_data)
+  delete_selected_rows(dialog)
+  deletion_dialog()
+  display_first_page()
+  display_last_page()
+  display_next_page()
+  display_previous_page()
+  display_table_data(index)
+  export_selected_rows()
+  go_to_last_page(index, total)
+  hide_tables()
+  init_layout()
+  on_delete_complete(index, success, error)
+  refresh_after_delete(index, current_page, total)
+  select_row(no, index)
+  select_table(index)
+  set_table_page_count(index, total)
+  show_table(index)
+  switch_table(e)
+  unselect_row(no, index)
+  unselect_table(index)
+  update_current_page()
+  update_selected_row(no, index, checkbox: ft.Checkbox)
+  update_table_pages_count()
+  update_table_rows(data_list, table: ft.DataTable, row, index)
+  update_table_selection(index, checkbox: ft.Checkbox)
+}
+class "Predator" as MJPP.Script.Device.Operator.USB.Predator {
+  HID : list
+  channel : NoneType
+  channel_index : int
+  channels : range
+  devices : dict
+  driver_key : str
+  drivers
+  ping : list
+  radios : NoneType
+  scan_active : bool
+  attack(hid, mal_command)
+  attack_with_rawdata(targets, payload)
+  clear_devices()
+  close()
+  device_detected(address, payload)
+  find_channel(address)
+  get_hid(payload)
+  get_payload(targets)
+  hex_to_str(data)
+  init_radio(activate_lna)
+  mousejack(targets, mal_code)
+  replay(targets)
+  report_address(targets)
+  report_channels(targets)
+  report_hid(targets)
+  scan(generic, timeout, callback)
+  send_payload(payload)
+  set_channel(channel)
+  sniff(timeout, addr_string, callback)
+  sniffer_mode(address)
+  str_to_hex(data)
+}
+class "Service" as MJPP.Script.Device.Hardware.Service {
+  action_threads : dict
+  cmd_queue
+  daemon : bool
+  data_ft
+  evt_queue
+  monitor : NoneType, USBMonitor
+  processed_devices : set
+  vid_pid_set
+  action_report(action, physical_id, vid, pid, info, report)
+  cmd_proc_loop()
+  device_event(evt, vid, pid, info)
+  error_report(title, error)
+  is_device_online(physical_id: str)
+  is_parent_usb_device(device_id: str)
+  mousejack_attack(vid, pid, physical_id, targets, mal_cmd, language, stop_event)
+  on_device_connected(device_id: str, device_info: Dict[str, Any])
+  on_device_disconnected(device_id: str, device_info: Dict[str, Any])
+  rawdata_attack(vid, pid, physical_id, targets, payload, stop_event)
+  reload_device()
+  replay_attack(vid, pid, physical_id, targets, stop_event)
+  replay_rawdata(vid, pid, physical_id, targets, payload, stop_event)
+  run()
+  scan(vid, pid, physical_id, stop_event)
+  start_attack(vid, pid, physical_id, payload, mode, parse, devices, language)
+  start_scan(vid, pid, physical_id)
+  stop_action(physical_id)
+}
+class "USBEvent" as MJPP.Script.Data.USBEvent {
+  device : dict
+  timestamp : Optional[float]
+  type : str
+}
+MJPP.Plugin.HID.microsoft_enc.HID --|> MJPP.Plugin.HID.microsoft.HID
+MJPP.Script.UI.Layout.Config.Appearance.Control --* MJPP.Script.UI.Layout.Config.Appearance.Panel : control
+MJPP.Script.UI.Layout.Config.ConfigBlock.Control --* MJPP.Script.UI.Layout.Config.ConfigBlock.Panel : control
+MJPP.Script.UI.Layout.Config.Plugin.Control --* MJPP.Script.UI.Layout.Config.Plugin.Panel : control
+MJPP.Script.UI.Layout.Homepage.DeviceOperator.Control --* MJPP.Script.UI.Layout.Homepage.DeviceOperator.Panel : control
+MJPP.Script.UI.Layout.Homepage.DeviceOperator.Panel --* MJPP.Script.UI.Layout.Homepage.HomeBlock.Control : device_op
+MJPP.Script.UI.Layout.Homepage.HomeBlock.Control --* MJPP.Script.UI.Layout.Homepage.HomeBlock.Panel : control
+MJPP.Script.UI.Layout.Intro.Control --* MJPP.Script.UI.Layout.Intro.Panel : control
+MJPP.Script.UI.Layout.Intro.Panel --* MJPP.Script.UI.Layout.AppLayout.Panel : intro
+MJPP.Script.UI.Layout.Log.LogBlock.Control --* MJPP.Script.UI.Layout.Log.LogBlock.Panel : control
+MJPP.Script.UI.Layout.Workbench.Control --* MJPP.Script.UI.Layout.Workbench.Panel : control
+MJPP.Script.UI.Layout.Workbench.Panel --* MJPP.Script.UI.Layout.AppLayout.Panel : workbench
+MJPP.Script.UI.Layout.AppLayout.Panel --o MJPP.Script.UI.Layout.AppLayout.Control : panel
+MJPP.Script.UI.Layout.Config.Appearance.Panel --o MJPP.Script.UI.Layout.Config.Appearance.Control : panel
+MJPP.Script.UI.Layout.Config.ConfigBlock.Panel --o MJPP.Script.UI.Layout.Config.ConfigBlock.Control : panel
+MJPP.Script.UI.Layout.Config.Plugin.Panel --o MJPP.Script.UI.Layout.Config.Plugin.Control : panel
+MJPP.Script.UI.Layout.Homepage.DeviceOperator.Panel --o MJPP.Script.UI.Layout.Homepage.DeviceOperator.Control : panel
+MJPP.Script.UI.Layout.Homepage.HomeBlock.Panel --o MJPP.Script.UI.Layout.Homepage.HomeBlock.Control : panel
+MJPP.Script.UI.Layout.Intro.Panel --o MJPP.Script.UI.Layout.Intro.Control : panel
+MJPP.Script.UI.Layout.Log.LogBlock.Panel --o MJPP.Script.UI.Layout.Log.LogBlock.Control : panel
+MJPP.Script.UI.Layout.Workbench.Panel --o MJPP.Script.UI.Layout.Workbench.Control : panel
+@enduml

@@ -159,23 +159,23 @@ class File:
         file_path = Path(self.config.THEME_PATH / file_name)
         self.delete_file(file_name, file_path)
 
-    def import_hid_plugin_file(self, e, callback=None):
-        self.file_open_picker.on_result = lambda event: self.handle_hid_plugin_import(event, callback)
+    def import_plugin_file(self, e, dict_name, callback=None):
+        self.file_open_picker.on_result = lambda event: self.handle_plugin_import(event, callback, dict_name)
         self.file_open_picker.pick_files(
             allow_multiple=False,
             file_type=ft.FilePickerFileType.CUSTOM,
             allowed_extensions=['py']
         )
 
-    def handle_hid_plugin_import(self, e: ft.FilePickerResultEvent, callback):
+    def handle_plugin_import(self, e: ft.FilePickerResultEvent, callback, dict_name: str):
         if e.files and len(e.files) > 0:
             file = e.files[0]
             try:
                 with open(file.path, 'r', encoding='utf-8') as f:
                     content = f.read()
-                    is_valid, error_msg = self.data_ft.validate_hid_plugin(content, file.name)
+                    is_valid, error_msg = self.data_ft.validate_plugin(content, file.name, dict_name)
                     if is_valid:
-                        hid_plugin_path = self.config.PLUGIN_PATH / 'HID' / file.name
+                        hid_plugin_path = self.config.PLUGIN_PATH / dict_name / file.name
                         if hid_plugin_path.exists():
                             self.page.open(
                                 ft.SnackBar(
@@ -213,8 +213,8 @@ class File:
                 )
             self.page.update()
 
-    def delete_hid_plugin_file(self, file_name: str, callback):
-        file_path = Path(self.config.PLUGIN_PATH / 'HID' / file_name)
+    def delete_plugin_file(self, dict_name: str, file_name: str, callback=None):
+        file_path = Path(self.config.PLUGIN_PATH / dict_name / file_name)
         self.delete_file(file_name, file_path, callback)
 
     def export_all_log_data(self, index):

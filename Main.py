@@ -4,11 +4,6 @@ from Script.Globals import *
 from Script.Database.SQLite import Operator
 from Script.Publisher import EventBroadcaster
 
-# needed to be changed
-USB = {
-    ("1915", "0102"),
-}
-
 
 class Application:
     def __init__(self):
@@ -35,7 +30,7 @@ class Application:
 
     def run(self):
         try:
-            self.hw_process = Hardware.Service(self.hw_cmd_queue, self.hw_evt_queue, USB)
+            self.hw_process = Hardware.Service(self.hw_cmd_queue, self.hw_evt_queue)
             self.hw_process.start()
             flet.app(lambda page: self.init_app(page, self.app_config, self.data_ft, self.db_operator))
         except Exception as e:

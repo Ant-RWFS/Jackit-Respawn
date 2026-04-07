@@ -23,7 +23,6 @@ hint:
 config:
   menu:
     ap: 'Appearance'
-    dv: 'Device'
     pg: 'Plugin'
   ap:
     style:

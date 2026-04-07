@@ -12,7 +12,7 @@ TABS = [
     },
     {
         'text': 'System Event',
-        'icon': ft.Icons.MEMORY,
+        'icon': ft.Icons.EVENT_NOTE,
     }
 ]
 
@@ -49,10 +49,6 @@ class Panel(AbstractUI):
         for table in self.control.tables.controls:
             table.visible = False
             table.update()
-
-    # def copy_data_row_to_clipboard(self, data):
-    #     json = self.data_ft.dict_to_json(data)
-    #     self.page.set_clipboard(json)
 
     def copy_raw_data_to_clipboard(self, raw_data):
         json = self.data_ft.raw_data_to_json(raw_data)

@@ -19,7 +19,6 @@ class AppConfig:
         self.RESC = self.init_resc()
         self.VIDEO = self.init_video()
         self.APPEARANCE = self.init_appearance()
-        self.DEVICE = self.init_device()
         self.DATABASE = self.init_database()
         self.PLUGIN = self.init_plugin()
         self.FIXED_COLORS = self.init_fixed_colors()
@@ -80,7 +79,6 @@ class AppConfig:
         self.RESC = self.init_resc()
         self.VIDEO = self.init_video()
         self.APPEARANCE = self.init_appearance()
-        self.DEVICE = self.init_device()
         self.DATABASE = self.init_database()
         self.PLUGIN = self.init_plugin()
         self.FIXED_COLORS = self.init_fixed_colors()
@@ -216,14 +214,6 @@ class AppConfig:
             )
         }
 
-    def init_device(self) -> dict:
-        device_config = self.modulized_config(self.DEVICE_PATH, self.CONFIG['device'])
-        # need to be changed when building multidevice connection, because it uses 'current'
-        return {
-            'name': device_config['name'],
-            'module': device_config['module'],
-        }
-
     def init_database(self) -> dict:
         return {
             'log': self.DATABASE_PATH / 'Log.db'
@@ -235,7 +225,8 @@ class AppConfig:
 
     def init_plugin(self) -> dict:
         return {
-            'hid': self.get_plugin_files('HID')
+            'hid': self.get_plugin_files('HID'),
+            'device': self.get_plugin_files('Device')
         }
 
     @staticmethod
@@ -278,8 +269,16 @@ class AppConfig:
         with open(path, 'r', encoding='utf-8') as f:
             return yaml.safe_load(f)
 
-    def read_hid_plugin(self, hid):
-        path = self.PLUGIN_PATH / 'HID' / hid
+    # def read_hid_plugin(self, hid):
+    #     path = self.PLUGIN_PATH / 'HID' / hid
+    #     lines = []
+    #     with open(path, 'r', encoding='utf-8') as f:
+    #         for line in f:
+    #             lines.append(line.rstrip())
+    #     return lines
+
+    def read_plugin(self, dict_name, file_name):
+        path = self.PLUGIN_PATH / dict_name / file_name
         lines = []
         with open(path, 'r', encoding='utf-8') as f:
             for line in f:

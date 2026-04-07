@@ -1,0 +1,95 @@
+@startuml packages_MJPP
+set namespaceSeparator none
+package "MJPP" as MJPP {
+}
+package "MJPP.Config" as MJPP.Config {
+}
+package "MJPP.Main" as MJPP.Main {
+}
+package "MJPP.Plugin" as MJPP.Plugin {
+}
+package "MJPP.Plugin.Device" as MJPP.Plugin.Device {
+}
+package "MJPP.Plugin.Device.nrf-research-firmware" as MJPP.Plugin.Device.nrf-research-firmware {
+}
+package "MJPP.Plugin.HID" as MJPP.Plugin.HID {
+}
+package "MJPP.Plugin.HID.amazon" as MJPP.Plugin.HID.amazon {
+}
+package "MJPP.Plugin.HID.dell" as MJPP.Plugin.HID.dell {
+}
+package "MJPP.Plugin.HID.logitech" as MJPP.Plugin.HID.logitech {
+}
+package "MJPP.Plugin.HID.microsoft" as MJPP.Plugin.HID.microsoft {
+}
+package "MJPP.Plugin.HID.microsoft_enc" as MJPP.Plugin.HID.microsoft_enc {
+}
+package "MJPP.Script" as MJPP.Script {
+}
+package "MJPP.Script.Abstracts" as MJPP.Script.Abstracts {
+}
+package "MJPP.Script.Config" as MJPP.Script.Config {
+}
+package "MJPP.Script.Config.Settings" as MJPP.Script.Config.Settings {
+}
+package "MJPP.Script.Data" as MJPP.Script.Data {
+}
+package "MJPP.Script.Database" as MJPP.Script.Database {
+}
+package "MJPP.Script.Database.SQLite" as MJPP.Script.Database.SQLite {
+}
+package "MJPP.Script.Device" as MJPP.Script.Device {
+}
+package "MJPP.Script.Device.Hardware" as MJPP.Script.Device.Hardware {
+}
+package "MJPP.Script.Device.Operator" as MJPP.Script.Device.Operator {
+}
+package "MJPP.Script.Device.Operator.Payload" as MJPP.Script.Device.Operator.Payload {
+}
+package "MJPP.Script.Device.Operator.USB" as MJPP.Script.Device.Operator.USB {
+}
+package "MJPP.Script.Globals" as MJPP.Script.Globals {
+}
+package "MJPP.Script.Publisher" as MJPP.Script.Publisher {
+}
+package "MJPP.Script.UI" as MJPP.Script.UI {
+}
+package "MJPP.Script.UI.Layout" as MJPP.Script.UI.Layout {
+}
+package "MJPP.Script.UI.Layout.AppLayout" as MJPP.Script.UI.Layout.AppLayout {
+}
+package "MJPP.Script.UI.Layout.Config" as MJPP.Script.UI.Layout.Config {
+}
+package "MJPP.Script.UI.Layout.Config.Appearance" as MJPP.Script.UI.Layout.Config.Appearance {
+}
+package "MJPP.Script.UI.Layout.Config.ConfigBlock" as MJPP.Script.UI.Layout.Config.ConfigBlock {
+}
+package "MJPP.Script.UI.Layout.Config.Plugin" as MJPP.Script.UI.Layout.Config.Plugin {
+}
+package "MJPP.Script.UI.Layout.Homepage" as MJPP.Script.UI.Layout.Homepage {
+}
+package "MJPP.Script.UI.Layout.Homepage.DeviceOperator" as MJPP.Script.UI.Layout.Homepage.DeviceOperator {
+}
+package "MJPP.Script.UI.Layout.Homepage.HomeBlock" as MJPP.Script.UI.Layout.Homepage.HomeBlock {
+}
+package "MJPP.Script.UI.Layout.Homepage.Singal" as MJPP.Script.UI.Layout.Homepage.Singal {
+}
+package "MJPP.Script.UI.Layout.Intro" as MJPP.Script.UI.Layout.Intro {
+}
+package "MJPP.Script.UI.Layout.Log" as MJPP.Script.UI.Layout.Log {
+}
+package "MJPP.Script.UI.Layout.Log.LogBlock" as MJPP.Script.UI.Layout.Log.LogBlock {
+}
+package "MJPP.Script.UI.Layout.Workbench" as MJPP.Script.UI.Layout.Workbench {
+}
+package "MJPP.Script.UI.UI" as MJPP.Script.UI.UI {
+}
+MJPP.Main --> MJPP.Script.Database.SQLite
+MJPP.Main --> MJPP.Script.Device
+MJPP.Main --> MJPP.Script.Device.Hardware
+MJPP.Main --> MJPP.Script.Globals
+MJPP.Main --> MJPP.Script.Publisher
+MJPP.Main --> MJPP.Script.UI
+MJPP.Main --> MJPP.Script.UI.UI
+MJPP.Plugin.HID.microsoft_enc --> MJPP.Plugin.HID.microsoft
+@enduml

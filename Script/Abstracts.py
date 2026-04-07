@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import *
 from Script.Globals import *
 
 
@@ -52,11 +52,62 @@ class AbstractUI(ABC):
         return self._data_ft
 
 
-class AbstractMapReader(ABC):
+class AbstractDriver(ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._config = config()
+        if not hasattr(self, 'vendor_id'):
+            raise TypeError(f"{self.__class__.__name__} must define vendor_id attribute")
+        if not hasattr(self, 'product_id'):
+            raise TypeError(f"{self.__class__.__name__} must define product_id attribute")
 
-    @property
-    def config(self):
-        return self._config
+    @abstractmethod
+    def init_device(self, *args, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
+    def execute_command(self, *args, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
+    def activate_promiscuous_mode(self, *args, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
+    def activate_promiscuous_mode_generic(self, *args, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
+    def activate_sniffer_mode(self, *args, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
+    def activate_tone_test_mode(self, *args, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
+    def recv_payload(self, *args, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
+    def send_payload(self, *args, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
+    def send_ack_payload(self, *args, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
+    def send_payload_generic(self, *args, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_channel(self, *args, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_channel(self, *args, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
+    def avctivate_LNA(self, *args, **kwargs):
+        raise NotImplementedError
