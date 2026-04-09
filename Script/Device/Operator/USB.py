@@ -2,7 +2,7 @@ import usb
 import time
 from six import iteritems
 from datetime import datetime
-from Script.Globals import FingerprintRegistry, DriverRegistry
+from Script.Plugins import FingerprintRegistry, DriverRegistry
 
 PING = [0x0f, 0x0f, 0x0f, 0x0f]
 CHANNEL_DWELL_TIME = 0.1

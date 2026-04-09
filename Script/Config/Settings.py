@@ -1,3 +1,4 @@
+import sys
 import yaml
 import flet as ft
 from pathlib import Path
@@ -7,6 +8,7 @@ class AppConfig:
     def __init__(self):
         self.ROOT = self.root()
         self.CONFIG = self.config()
+        self.ICON_PATH = self.ROOT / 'Asset' / 'Icon'
         self.FONT_PATH = self.ROOT / 'Asset' / 'Font'
         self.RESC_PATH = self.ROOT / 'Asset' / 'Resc'
         self.VIDEO_PATH = self.ROOT / 'Asset' / 'Video'
@@ -14,6 +16,7 @@ class AppConfig:
         self.DEVICE_PATH = self.ROOT / 'Asset' / 'Device'
         self.DATABASE_PATH = self.ROOT / 'Asset' / 'Database'
         self.PLUGIN_PATH = self.ROOT / 'Plugin'
+        self.ICON = self.init_icon()
         self.INFO = self.init_info()
         self.FONT = self.init_font()
         self.RESC = self.init_resc()
@@ -26,14 +29,17 @@ class AppConfig:
 
     @staticmethod
     def root():
-        return Path(__file__).parents[2]
+        if getattr(sys, 'frozen', False):
+            return Path(sys._MEIPASS)
+        else:
+            return Path(__file__).parents[2]
 
     def config(self) -> dict:
         path = self.ROOT / 'Config' / 'config.yml'
         try:
             with open(path, 'r', encoding='utf-8-sig') as f:
                 data = yaml.safe_load(f)
-                return data if data is not None else {}
+                return data
         except FileNotFoundError:
             raise FileNotFoundError(f'No Such file: {path}')
 
@@ -67,6 +73,7 @@ class AppConfig:
     def init_config(self):
         self.ROOT = self.root()
         self.CONFIG = self.config()
+        self.ICON_PATH = self.ROOT / 'Asset' / 'Icon'
         self.FONT_PATH = self.ROOT / 'Asset' / 'Font'
         self.RESC_PATH = self.ROOT / 'Asset' / 'Resc'
         self.VIDEO_PATH = self.ROOT / 'Asset' / 'Video'
@@ -74,6 +81,7 @@ class AppConfig:
         self.DEVICE_PATH = self.ROOT / 'Asset' / 'Device'
         self.DATABASE_PATH = self.ROOT / 'Asset' / 'Database'
         self.PLUGIN_PATH = self.ROOT / 'Plugin'
+        self.ICON = self.init_icon()
         self.INFO = self.init_info()
         self.FONT = self.init_font()
         self.RESC = self.init_resc()
@@ -93,9 +101,15 @@ class AppConfig:
     def reload_plugin(self):
         self.PLUGIN = self.init_plugin()
 
+    def init_icon(self) -> dict:
+        return {
+            'app': f"{self.ICON_PATH / 'Jackit Respawn.ico'}"
+        }
+
     def init_info(self) -> dict:
         info = self.CONFIG['info']
         return {
+            'header': f"{str(info['title'])}-{str(info['version'])}",
             'title': str(info['title']),
             'version': str(info['version']),
             'author': str(info['author']),
@@ -268,14 +282,6 @@ class AppConfig:
         path = self.RESC_PATH / 'keymap' / f'{language}.yml'
         with open(path, 'r', encoding='utf-8') as f:
             return yaml.safe_load(f)
-
-    # def read_hid_plugin(self, hid):
-    #     path = self.PLUGIN_PATH / 'HID' / hid
-    #     lines = []
-    #     with open(path, 'r', encoding='utf-8') as f:
-    #         for line in f:
-    #             lines.append(line.rstrip())
-    #     return lines
 
     def read_plugin(self, dict_name, file_name):
         path = self.PLUGIN_PATH / dict_name / file_name

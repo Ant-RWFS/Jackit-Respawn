@@ -25,18 +25,20 @@ class Control(AbstractUI):
     def __init__(self, panel: Panel):
         super().__init__()
         self.panel = panel
+        # Device Operation
+        self.device_op = DeviceOperator.Panel()
+        self.device_op_layout = self.device_op.layout
         # Device Info
         self.device_cards = {}
         self.device_info_width = 0
         self.selected_vid_pid = None
         self.is_device_info_expanded = False
+        self.is_recv_detail_expanded = False
         self.device_info_empty_hint = self.init_device_info_empty_hint()
         self.device_info_display_btn = self.init_device_info_display_btn()
+        self.recv_detail_display_btn = self.init_recv_detail_display_btn()
         self.device_info_btn_list = self.init_device_info_btn_list()
         self.device_info_view = self.init_device_info_view()
-        # Device Operation
-        self.device_op = DeviceOperator.Panel()
-        self.device_op_layout = self.device_op.layout
 
         self.evt_bcst.subscribe(self.on_usb_event)
 
@@ -73,13 +75,25 @@ class Control(AbstractUI):
             border_radius=3,
         )
 
+    def init_recv_detail_display_btn(self):
+        return ft.Container(
+            content=ft.IconButton(
+                icon=ft.Icons.VISIBILITY_OFF,
+                tooltip=self.config.RESC['text']['hint']['recv']['detail']['hide'],
+                on_click=self.toggle_recv_detail,
+                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=5)),
+            ),
+            border=ft.Border(right=ft.BorderSide(3, ft.Colors.PRIMARY)),
+            border_radius=3,
+        )
+
     def init_device_info_view(self):
         return ft.Row(
             controls=[
                 ft.Column(controls=[self.device_info_btn_list]),
                 ft.Container(
                     content=ft.Column(
-                        controls=[self.device_info_display_btn],
+                        controls=[self.device_info_display_btn, self.recv_detail_display_btn],
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
                     border=ft.Border(left=ft.BorderSide(1, ft.Colors.PRIMARY)),
@@ -110,8 +124,18 @@ class Control(AbstractUI):
 
         self.page.update()
 
+    def toggle_recv_detail(self, e):
+        self.is_recv_detail_expanded = not self.is_recv_detail_expanded
+        self.device_op.toggle_recv_detail()
+
+        if self.is_recv_detail_expanded:
+            self.recv_detail_display_btn.content.icon = ft.Icons.VISIBILITY
+        else:
+            self.recv_detail_display_btn.content.icon = ft.Icons.VISIBILITY_OFF
+
+        self.recv_detail_display_btn.update()
+
     def registered_usb_button(self, vid, pid):
-        # is_selected = self.selected_vid_pid == (vid, pid)
         return ft.ElevatedButton(
             content=ft.Row(
                 controls=[

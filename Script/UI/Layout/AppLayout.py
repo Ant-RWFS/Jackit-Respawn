@@ -1,7 +1,7 @@
 import flet as ft
 from . import Workbench, Intro
 from Script.Abstracts import AbstractUI
-from Script.Globals import USBEvent
+from Script.Data import USBEvent
 
 
 class Panel(AbstractUI):

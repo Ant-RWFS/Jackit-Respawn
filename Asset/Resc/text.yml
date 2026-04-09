@@ -18,6 +18,9 @@ hint:
       hide: 'Hide Device Info List'
       empty: 'NO DEVICE CONNECTED'
       detect_time: 'Detection takes few seconds.'
+  recv:
+    detail:
+      hide: 'Hide Received Details'
   payload:
     enter: 'Enter Payload'
 config:

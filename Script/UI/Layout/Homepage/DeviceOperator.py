@@ -2,7 +2,7 @@ import threading
 import flet as ft
 from Script.Data import USBEvent
 from Script.Abstracts import AbstractUI
-from Script.UI.Layout.Homepage.Singal import Diagram
+from Script.UI.Layout.Homepage.Signal import Diagram
 
 
 class Panel(AbstractUI):
@@ -26,18 +26,25 @@ class Panel(AbstractUI):
             expand=True,
         )
 
+    def toggle_recv_detail(self):
+        self.control.device_recv_detail_window.visible = not self.control.device_recv_detail_window.visible
+        self.control.device_recv_detail_window.update()
+
     def reset_recv_list(self, e):
         self.control.device_recv_list.controls.clear()
+        self.control.reset_detail_header_icon()
         for key in self.control.device_recv_detail_dict:
-            if key == 'Data Diagram':
-                self.control.data_diagram.init_placeholder()
-            else:
-                self.control.device_recv_detail_dict[key].value = '-'
-        self.control.device_recv_list.update()
-        self.control.device_recv_detail.update()
+            self.control.device_recv_detail_dict[key].value = '-'
+        self.control.device_recv_data_diagram.visible = False
+        self.page.update()
 
     def display_recv_detail(self, e, data, detail):
         self.control.selected_device = data
+
+        if not self.control.device_recv_data_diagram.visible:
+            self.control.device_recv_data_diagram.visible = True
+
+        self.control.focus_detail_header_icon()
         for key, value in detail.items():
             if key == 'Data':
                 self.control.device_recv_detail_dict['Hex Data'].value = value
@@ -206,12 +213,17 @@ class Control(AbstractUI):
         self.attack_confirm_btn = self.init_attack_confirm_btn()
         self.payload_action_bar = self.init_payload_action_bar()
         # Output Views
-        self.device_recv_header_bar = self.init_device_recv_header_bar()
-        self.device_recv_list = self.init_device_recv_list()
         self.data_diagram = Diagram(self.page, self.config)
+        self.device_recv_header_icon = self.init_device_recv_header_icon()
+        self.device_recv_data_diagram = self.init_device_recv_data_diagram()
         self.device_recv_detail_dict = self.init_device_recv_detail_dict()
         self.device_recv_detail = self.init_device_recv_detail()
-        self.device_recv_window = self.init_device_recv_window()
+
+        self.device_recv_detail_window = self.init_device_recv_detail_window()
+        self.device_recv_header_bar = self.init_device_recv_header_bar()
+        self.device_recv_list = self.init_device_recv_list()
+        self.device_recv_list_window = self.init_device_recv_list_window()
+
         self.device_output_window = self.init_device_output_window()
         # General Window Views
         self.output_window = self.init_output_window()
@@ -421,30 +433,29 @@ class Control(AbstractUI):
             expand=True,
         )
 
-    def init_device_recv_window(self):
-        return ft.Row(
-            controls=[
-                ft.Container(
-                    ft.Column(
-                        controls=[
-                            self.device_recv_header_bar,
-                            self.device_recv_list
-                        ],
-                        spacing=0,
-                    ),
-                    padding=0,
-                    clip_behavior=ft.ClipBehavior.HARD_EDGE,
-                    border=ft.border.only(right=ft.BorderSide(1, ft.Colors.PRIMARY)),
-                    expand=3
-                ),
-                ft.Container(
-                    content=self.device_recv_detail,
-                    clip_behavior=ft.ClipBehavior.HARD_EDGE,
-                    expand=2
-                ),
-            ],
-            height=300,
-            spacing=0,
+    def init_device_recv_list_window(self):
+        return ft.Container(
+            ft.Column(
+                controls=[
+                    self.device_recv_header_bar,
+                    self.device_recv_list
+                ],
+                spacing=0,
+            ),
+            padding=0,
+            border_radius=5,
+            border=ft.border.all(1, ft.Colors.PRIMARY),
+            expand=2
+        )
+
+    def init_device_recv_detail_window(self):
+        return ft.Container(
+            content=self.device_recv_detail,
+            padding=0,
+            border_radius=5,
+            border=ft.border.all(1, ft.Colors.PRIMARY),
+            expand=1,
+            visible=False
         )
 
     @staticmethod
@@ -544,37 +555,99 @@ class Control(AbstractUI):
         }
         return formatted_data
 
+    def init_device_recv_data_diagram(self):
+        return ft.GestureDetector(content=self.data_diagram,
+                                  on_tap=lambda e: self.panel.display_diagram_dialog(e, self.data_diagram),
+                                  visible=False)
+
+    @staticmethod
+    def init_device_recv_header_icon():
+        return ft.Icon(ft.Icons.GPS_NOT_FIXED)
+
+    def focus_detail_header_icon(self):
+        self.device_recv_header_icon.name = ft.Icons.CENTER_FOCUS_STRONG
+        self.device_recv_header_icon.update()
+
+    def reset_detail_header_icon(self):
+        self.device_recv_header_icon.name = ft.Icons.GPS_NOT_FIXED
+        self.device_recv_header_icon.update()
+
     def init_device_recv_detail(self):
-        def headline(text):
+        def divider():
+            return ft.Divider(
+                thickness=1,
+                height=1
+            )
+
+        def header():
+            return ft.Column(
+                controls=[
+                    ft.Row(
+                        controls=[
+                            self.device_recv_header_icon,
+                            ft.Text(
+                                value='Target',
+                                theme_style=ft.TextThemeStyle.BODY_LARGE, text_align=ft.TextAlign.START,
+                            )
+                        ]
+                    ),
+                    divider()
+                ],
+                expand=True
+            )
+
+        def detail(text):
             content = self.device_recv_detail_dict[text]
             return ft.Column(
                 controls=[
-                    ft.Text(text, theme_style=ft.TextThemeStyle.BODY_LARGE, text_align=ft.TextAlign.CENTER),
-                    ft.Container(ft.Divider(height=1, thickness=1, color=self.config.FIXED_COLORS['sub_content']),
-                                 width=100),
-                    ft.GestureDetector(
-                        content=content,
-                        on_tap=lambda e: self.panel.copy_data_to_clipboard(e, content)
-                        if text in ['Hex Data', 'Dec Data'] else None,
-                    ),
+                    ft.Row(
+                        controls=[
+                            ft.Row(
+                                controls=[
+                                    ft.Text(text,
+                                            theme_style=ft.TextThemeStyle.LABEL_MEDIUM,
+                                            text_align=ft.TextAlign.START,
+                                            width=100),
+                                    ft.IconButton(
+                                        content=ft.Icon(ft.Icons.COPY, scale=0.8),
+                                        on_click=lambda e: self.panel.copy_data_to_clipboard(e, content),
+                                    ) if text in ['Hex Data', 'Dec Data'] else ft.Container()
+                                ],
+                                spacing=0,
+                                width=140,
+                                height=40
+                            ),
+                            content,
+                        ]
+                    )
                 ],
                 spacing=0,
+            )
+
+        def diagram():
+            return ft.Column(
+                controls=[
+                    divider(),
+                    ft.Text(value='Data Diagram',
+                            theme_style=ft.TextThemeStyle.BODY_LARGE, text_align=ft.TextAlign.START, width=200),
+                    self.device_recv_data_diagram
+                ]
             )
 
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    headline('No.'),
-                    headline('Timestamp'),
-                    headline('Address'),
-                    headline('Channels'),
-                    headline('HID'),
-                    headline('Hex Data'),
-                    headline('Dec Data'),
-                    headline('Data Diagram')
+                    header(),
+                    detail('No.'),
+                    detail('Timestamp'),
+                    detail('Address'),
+                    detail('Channels'),
+                    detail('HID'),
+                    detail('Hex Data'),
+                    detail('Dec Data'),
+                    diagram()
                 ],
                 scroll=ft.ScrollMode.AUTO,
-                width=1000,
                 expand=True
             ),
             padding=10,
@@ -591,18 +664,16 @@ class Control(AbstractUI):
             'Channels': ft.Text('-'),
             'HID': ft.Text('-'),
             'Hex Data': ft.Text('-', tooltip=self.config.RESC['text']['tooltip']['cc']),
-            'Dec Data': ft.Text('-', tooltip=self.config.RESC['text']['tooltip']['cc']),
-            'Data Diagram': ft.GestureDetector(content=self.data_diagram,
-                                               on_tap=lambda e: self.panel.display_diagram_dialog(e, self.data_diagram))
+            'Dec Data': ft.Text('-', tooltip=self.config.RESC['text']['tooltip']['cc'])
         }
 
     def init_device_output_window(self):
         return ft.Container(
-            content=self.device_recv_window,
-            border_radius=5,
-            border=ft.border.all(
-                width=1,
-                color=ft.Colors.PRIMARY
+            content=ft.Row(
+                controls=[
+                    self.device_recv_detail_window,
+                    self.device_recv_list_window
+                ]
             ),
             height=500,
             expand=True,

@@ -21,8 +21,8 @@ font:
     small: 12
 info:
   author: ANT-RWFS
-  title: JACKIT MOBILE
-  version: 0.1.0
+  title: Jackit Respawn
+  version: 1.1.2
 resc:
   file:
     op: operation.yml
