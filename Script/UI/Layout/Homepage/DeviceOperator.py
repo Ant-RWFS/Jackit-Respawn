@@ -1,8 +1,8 @@
-import threading
 import flet as ft
 from Script.Data import USBEvent
 from Script.Abstracts import AbstractUI
 from Script.UI.Layout.Homepage.Signal import Diagram
+from Script.UI.Layout.Homepage.Controls import *
 
 
 class Panel(AbstractUI):
@@ -39,7 +39,7 @@ class Panel(AbstractUI):
         self.page.update()
 
     def display_recv_detail(self, e, data, detail):
-        self.control.selected_device = data
+        self.control.selected_target = data
 
         if not self.control.device_recv_data_diagram.visible:
             self.control.device_recv_data_diagram.visible = True
@@ -62,124 +62,86 @@ class Panel(AbstractUI):
             self.page.set_clipboard(f'[{string}]')
 
     def update_attack_confirm_btn(self):
-        self.control.attack_confirm_btn.data = True
-        self.control.attack_confirm_btn.content = ft.Container(ft.Icon(
-            name=ft.Icons.PAUSE_CIRCLE_OUTLINE_OUTLINED,
-            color=ft.Colors.PRIMARY,
-            scale=0.8
-        ),
-            width=100
-        )
         self.control.attack_confirm_btn.update()
 
     def reset_attack_confirm_btn(self):
-        self.control.attack_confirm_btn.data = False
-        self.control.attack_confirm_btn.content = ft.Container(ft.Icon(
-            name=ft.Icons.PLAY_CIRCLE_OUTLINE,
-            color=ft.Colors.PRIMARY,
-            scale=0.8
-        ),
-            width=100
-        )
-        self.control.attack_confirm_btn.update()
-
-    def set_attack_mode(self, e, name, mode):
-        self.control.attack_mode_btn.content.value = f'{name}: {mode}'
-        self.control.attack_mode_btn.data = mode
-        self.page.update()
-
-    def set_payload_language(self, e, name, language):
-        self.control.payload_language_btn.content.value = f'{name}: {language}'
-        self.control.payload_language_btn.data = language
-        self.page.update()
-
-    def set_payload_mode(self, e, name, mode):
-        self.control.payload_mode_btn.data = True if mode == 'Parsed' else False
-        self.control.payload_mode_btn.content = self.control.attack_bar_btn_text(f"{name}: {mode}")
-        self.control.payload_mode_btn.update()
+        self.control.attack_confirm_btn.reset()
 
     def scan_confirm(self, e):
-        self.start_animation()
+        self.control.scan_confirm_btn.start_animation()
         if self.control.selected_vid_pid:
-            if not self.control.scan_confirm_btn.data:
+            if not self.control.scan_confirm_btn.layout.data:
                 self.reset_attack_confirm_btn()
-                self.update_scan_confirm_btn()
+                self.control.scan_confirm_btn.update()
             else:
                 self.reset_scan_confirm_btn()
             self.cmd.put({
-                'type': 'scan_start' if self.control.scan_confirm_btn.data else 'scan_stop',
+                'type': 'scan_start' if self.control.scan_confirm_btn.layout.data else 'scan_stop',
                 'vid': f'{self.control.selected_vid_pid[0]}',
                 'pid': f'{self.control.selected_vid_pid[1]}',
                 'devices': None,
                 'payload': '',
                 'mode': '',
-                'parse': False,
-                'language': 'us'
+                'config': self.config.RADIO_CONFIG_CACHE
+                # 'mode': '',
+                # 'parse': False,
+                # 'language': 'us'
             })
 
-    def start_animation(self):
-        if self.control.scan_confirm_btn.data:
-            self.control.scan_confirm_btn.content.rotate = self.control.scan_confirm_btn.content.rotate + 0.5
-            self.control.scan_confirm_btn.content.update()
-            self.page.run_thread(threading.Timer(0.05, self.start_animation).start)
-
-    def update_scan_confirm_btn(self):
-        self.control.scan_confirm_btn.data = True
-        self.control.scan_confirm_btn.content = ft.Container(ft.Icon(
-            name=ft.Icons.RADAR,
-            color=ft.Colors.PRIMARY,
-            scale=0.8,
-        ),
-            width=100,
-            rotate=0,
-            animate_rotation=ft.animation.Animation(300, ft.AnimationCurve.LINEAR),
-        )
-        self.control.scan_confirm_btn.update()
-        self.start_animation()
-
     def reset_scan_confirm_btn(self):
-        self.control.scan_confirm_btn.data = False
-        self.control.scan_confirm_btn.content = ft.Container(ft.Text(
-            value=self.config.RESC['op']['attack']['confirm']['scn'],
-            theme_style=ft.TextThemeStyle.LABEL_SMALL,
-            text_align=ft.TextAlign.CENTER,
-        ),
-            width=100,
-            rotate=0,
-            animate_rotation=ft.animation.Animation(300, ft.AnimationCurve.LINEAR),
-        )
-        self.control.scan_confirm_btn.update()
+        self.control.scan_confirm_btn.reset()
 
     def attack_confirm(self, e):
         if self.control.selected_vid_pid:
             payload = self.control.payload_input_window.value
-            if not self.control.attack_confirm_btn.data:
+            if not self.control.attack_confirm_btn.layout.data:
                 self.reset_scan_confirm_btn()
                 self.update_attack_confirm_btn()
             else:
                 self.reset_attack_confirm_btn()
             self.payload_re_check(payload)
             payload = self.payload_reformat(payload)
-            self.cmd.put({'type': 'attack_start' if self.control.attack_confirm_btn.data else 'attack_stop',
+            self.cmd.put({'type': 'attack_start' if self.control.attack_confirm_btn.layout.data else 'attack_stop',
                           'vid': f'{self.control.selected_vid_pid[0]}',
                           'pid': f'{self.control.selected_vid_pid[1]}',
-                          'devices': self.control.selected_device,
+                          'devices': self.control.selected_target,
                           'payload': payload,
-                          'mode': f'{self.control.attack_mode_btn.data}',
-                          'parse': self.control.payload_mode_btn.data,
-                          'language': f'{str(self.control.payload_language_btn.data).lower()}',
+                          'mode': f'{self.control.attack_mode_btn.layout.data}',
+                          'config': self.config.RADIO_CONFIG_CACHE
+                          # 'mode': f'{self.control.attack_mode_btn.layout.data}',
+                          # 'parse': self.control.payload_mode_btn.data,
+                          # 'language': f'{str(self.control.payload_language_btn.data).lower()}',
                           })
 
     def payload_re_check(self, payload):
-        if self.control.payload_mode_btn.data:
+        key = self.control.attack_mode_btn.layout.data
+        mode_index = self.config.RADIO_CONFIG_CACHE[key]['mode_index']
+        if mode_index == 0:
             if not self.data_ft.re_parse_payload(payload):
                 return
-        else:
+        elif mode_index == 1:
             if not self.data_ft.re_raw_payload(payload):
                 return
+        # if  == 'Mousejack':
+        #     if self.config.RADIO_CONFIG_CACHE['mj']['mode_index'] == 0:
+        #         if not self.data_ft.re_parse_payload(payload):
+        #             return
+        #     else:
+        #         if not self.data_ft.re_raw_payload(payload):
+        #             return
+        # else:
+
+    #     if self.control.payload_mode_btn.data:
+    #         if not self.data_ft.re_parse_payload(payload):
+    #             return
+    #     else:
+    #         if not self.data_ft.re_raw_payload(payload):
+    #             return
 
     def payload_reformat(self, payload):
-        if self.control.payload_mode_btn.data:
+        key = self.control.attack_mode_btn.layout.data
+        mode_index = self.config.RADIO_CONFIG_CACHE[key]['mode_index']
+        if mode_index == 0:
             return f'{payload}'
         else:
             return self.data_ft.raw_payload_to_list(payload)
@@ -199,18 +161,19 @@ class Control(AbstractUI):
     def __init__(self, panel: Panel):
         super().__init__()
         self.selected_vid_pid = None
-        self.selected_device = None
+        self.selected_target = None
         self.panel = panel
         # Input Window
         self.payload_input_window = self.init_payload_input_window()
         # Action Bar
-        self.recv_list_reset_btn = self.init_recv_list_reset_btn()
-        self.attack_payload_btn = self.init_attack_payload_btn()
-        self.attack_mode_btn = self.init_attack_mode_btn()
-        self.payload_language_btn = self.init_payload_language_btn()
-        self.payload_mode_btn = self.init_payload_mode_btn()
-        self.scan_confirm_btn = self.init_scan_confirm_btn()
-        self.attack_confirm_btn = self.init_attack_confirm_btn()
+        self.reset_recv_btn = Button.ResetRecvButton(self.panel.reset_recv_list)
+        self.payload_file_op_btn = Button.PayloadFileOPButton(self.payload_input_window)
+        self.attack_mode_btn = Button.AttackModeButton()
+        # self.payload_language_btn = self.init_payload_language_btn()
+        # self.payload_mode_btn = self.init_payload_mode_btn()
+        self.scan_confirm_btn = Button.ScanConfirmButton(self.panel.scan_confirm)
+        self.attack_confirm_btn = Button.AttackConfirmButton(self.panel.attack_confirm)
+        self.radio_setting_btn = Button.RadioSettingButton()
         self.payload_action_bar = self.init_payload_action_bar()
         # Output Views
         self.data_diagram = Diagram(self.page, self.config)
@@ -289,88 +252,33 @@ class Control(AbstractUI):
             width=100,
         )
 
-    def init_recv_list_reset_btn(self):
-        return ft.MenuItemButton(
-            data=False,
-            content=ft.Container(ft.Text(
-                value=self.config.RESC['op']['receive']['rt'],
-                theme_style=ft.TextThemeStyle.LABEL_SMALL,
-                text_align=ft.TextAlign.CENTER,
-            ),
-                width=100,
-            ),
-            on_click=lambda e: self.panel.reset_recv_list(e)
-        )
-
-    def init_attack_payload_btn(self):
-        texts = self.config.RESC['op']['attack']['payload']
-        return ft.SubmenuButton(
-            content=self.attack_bar_btn_text(texts['name']),
-            controls=[
-                self.attack_bar_sub_btn(ft.Icons.FILE_DOWNLOAD_ROUNDED, texts['sv'],
-                                        lambda e: self.file_op.save_file(e, texts['eg'], texts['ex'],
-                                                                         self.payload_input_window)),
-                self.attack_bar_sub_btn(ft.Icons.FILE_OPEN_ROUNDED, texts['op'],
-                                        lambda e: self.file_op.open_file(e, texts['ex'],
-                                                                         self.payload_input_window))
-            ],
-        )
-
-    def init_attack_mode_btn(self):
-        texts = self.config.RESC['op']['attack']['mode']
-        return ft.SubmenuButton(
-            data=texts['mj'],
-            content=self.attack_bar_btn_text(f"{texts['name']}: {texts['mj']}"),
-            controls=[
-                self.attack_bar_sub_btn(ft.Icons.KEYBOARD_ROUNDED, texts['mj'],
-                                        lambda e: self.panel.set_attack_mode(e, texts['name'], texts['mj'])),
-                self.attack_bar_sub_btn(ft.Icons.REPLAY_ROUNDED, texts['rp'],
-                                        lambda e: self.panel.set_attack_mode(e, texts['name'], texts['rp']))
-            ],
-        )
-
-    def init_payload_language_btn(self):
-        texts = self.config.RESC['op']['attack']['language']
-        current = 'us'
-        return ft.SubmenuButton(
-            data=current,
-            content=self.attack_bar_btn_text(f"{texts['name']}: {current}"),
-            controls=[
-                self.attack_bar_sub_btn(None,
-                                        str(name).upper(),
-                                        lambda e, lang=name.lower():
-                                        self.panel.set_payload_language(e, texts['name'], lang))
-                for name in self.config.get_language_list()
-            ],
-        )
-
-    def init_payload_mode_btn(self):
-        texts = self.config.RESC['op']['attack']['payload']['mode']
-        return ft.SubmenuButton(
-            data=True,
-            content=self.attack_bar_btn_text(f"{texts['name']}: {texts['ps']}"),
-            controls=[
-                self.attack_bar_sub_btn(ft.Icons.CODE, texts['ps'],
-                                        lambda e: self.panel.set_payload_mode(e, texts['name'], texts['ps'])),
-                self.attack_bar_sub_btn(ft.Icons.DATA_ARRAY, texts['rw'],
-                                        lambda e: self.panel.set_payload_mode(e, texts['name'], texts['rw']))
-            ],
-        )
-
-    def init_scan_confirm_btn(self):
-        return ft.MenuItemButton(
-            data=False,
-            content=ft.Container(ft.Text(
-                value=self.config.RESC['op']['attack']['confirm']['scn'],
-                theme_style=ft.TextThemeStyle.LABEL_SMALL,
-                text_align=ft.TextAlign.CENTER,
-            ),
-                width=100,
-                rotate=0,
-                animate_rotation=ft.animation.Animation(300, ft.AnimationCurve.LINEAR),
-            ),
-            on_click=lambda e: self.panel.scan_confirm(e)
-        )
+    # def init_payload_language_btn(self):
+    #     texts = self.config.RESC['op']['attack']['language']
+    #     current = 'us'
+    #     return ft.SubmenuButton(
+    #         data=current,
+    #         content=self.attack_bar_btn_text(f"{texts['name']}: {current}"),
+    #         controls=[
+    #             self.attack_bar_sub_btn(None,
+    #                                     str(name).upper(),
+    #                                     lambda e, lang=name.lower():
+    #                                     self.panel.set_payload_language(e, texts['name'], lang))
+    #             for name in self.config.get_language_list()
+    #         ],
+    #     )
+    #
+    # def init_payload_mode_btn(self):
+    #     texts = self.config.RESC['op']['attack']['payload']['mode']
+    #     return ft.SubmenuButton(
+    #         data=True,
+    #         content=self.attack_bar_btn_text(f"{texts['name']}: {texts['ps']}"),
+    #         controls=[
+    #             self.attack_bar_sub_btn(ft.Icons.CODE, texts['ps'],
+    #                                     lambda e: self.panel.set_payload_mode(e, texts['name'], texts['ps'])),
+    #             self.attack_bar_sub_btn(ft.Icons.DATA_ARRAY, texts['rw'],
+    #                                     lambda e: self.panel.set_payload_mode(e, texts['name'], texts['rw']))
+    #         ],
+    #     )
 
     def init_attack_confirm_btn(self):
         return ft.MenuItemButton(
@@ -389,13 +297,14 @@ class Control(AbstractUI):
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    self.recv_list_reset_btn,
-                    self.attack_payload_btn,
-                    self.attack_mode_btn,
-                    self.payload_language_btn,
-                    self.payload_mode_btn,
-                    self.scan_confirm_btn,
-                    self.attack_confirm_btn,
+                    ft.Container(self.reset_recv_btn.layout, expand=1),
+                    ft.Container(self.payload_file_op_btn.layout, expand=1),
+                    ft.Container(self.attack_mode_btn.layout, expand=1),
+                    # self.payload_language_btn,
+                    # self.payload_mode_btn,
+                    ft.Container(self.scan_confirm_btn.layout, expand=1),
+                    ft.Container(self.attack_confirm_btn.layout, expand=1),
+                    ft.Container(self.radio_setting_btn.layout, expand=1)
                 ],
                 spacing=0
             ),

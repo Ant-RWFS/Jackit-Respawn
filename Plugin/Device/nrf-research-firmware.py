@@ -54,11 +54,18 @@ class Driver(object):
         data = [command] + list(data)
         self.device.write(0x01, data, timeout=USB_TIMEOUT)
 
-    def activate_promiscuous_mode(self, prefix=[]):
+    def activate_promiscuous_mode(self, prefix=None):
+        if prefix is None:
+            prefix = []
         self.execute_command(NRF24_COMMANDS["PROMISCUOUS_MODE"], [len(prefix)] + prefix)
         self.device.read(0x81, 64, timeout=USB_TIMEOUT)
 
-    def activate_promiscuous_mode_generic(self, prefix=[], rate=RF_RATE["2M"]):
+    def activate_promiscuous_mode_generic(self, prefix=None, radio_freq=None):
+        if prefix is None:
+            prefix = []
+        if radio_freq is None:
+            radio_freq = '2M'
+        rate = RF_RATE[radio_freq]
         self.execute_command(NRF24_COMMANDS["PROMISCUOUS_MODE_GENERIC"], [len(prefix), rate] + prefix)
         self.device.read(0x81, 64, timeout=USB_TIMEOUT)
 
@@ -84,7 +91,9 @@ class Driver(object):
         self.execute_command(NRF24_COMMANDS["TRANSMIT_ACK_PAYLOAD"], data)
         return self.device.read(0x81, 64, timeout=USB_TIMEOUT)[0] > 0
 
-    def send_payload_generic(self, payload, address=[0x33, 0x33, 0x33, 0x33, 0x33]):
+    def send_payload_generic(self, payload, address=None):
+        if address is None:
+            address = [0x33, 0x33, 0x33, 0x33, 0x33]
         data = [len(payload), len(address)] + payload + address
         self.execute_command(NRF24_COMMANDS["TRANSMIT_PAYLOAD_GENERIC"], data)
         return self.device.read(0x81, 64, timeout=USB_TIMEOUT)[0] > 0

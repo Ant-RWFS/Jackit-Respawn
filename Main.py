@@ -86,6 +86,7 @@ class Application:
 
             if self.hw_process.is_alive():
                 self.hw_process.terminate()
+        self.app_config.save_configs()
         self.evt_bcst.subscribers.clear()
 
     def command_hardware(self, type='', vid='', pid='', devices=None, payload='', mode=''):

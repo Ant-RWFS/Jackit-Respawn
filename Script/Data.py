@@ -257,3 +257,80 @@ class Formatter:
             return result
         except Exception as e:
             return []
+
+    @staticmethod
+    def validate_and_format_config_ping(ping: str) -> tuple[bool, str]:
+        if not ping or ping.strip() == '':
+            return True, ''
+
+        cleaned = re.sub(r'\s+', '', ping)
+        cleaned = cleaned.lower()
+        cleaned = re.sub(r',+$', '', cleaned)
+        cleaned = re.sub(r'^,+', '', cleaned)
+        cleaned = re.sub(r',+', ',', cleaned)
+
+        parts = cleaned.split(',')
+        fixed_parts = []
+        for part in parts:
+            if part and not part.startswith('0x'):
+                if re.match(r'^[0-9a-f]{2}$', part):
+                    part = f'0x{part}'
+            fixed_parts.append(part)
+        cleaned = ','.join(fixed_parts)
+
+        def pad_hex(match):
+            hex_val = match.group(1)
+            return f'0x{hex_val.zfill(2)}'
+
+        cleaned = re.sub(r'0x([0-9a-f]{1,2})', pad_hex, cleaned)
+        pattern = r'^(0x[0-9a-fA-F]{2})(,0x[0-9a-fA-F]{2})*$'
+        if re.match(pattern, cleaned, re.IGNORECASE):
+            return True, cleaned
+        else:
+            return False, ping
+
+    def update_radio_config_dict(self, current_radio_data: dict, mj_mode_index: int,
+                                 mj_lang: str, mj_delay: float, rp_mode_index: int,
+                                 rp_delay: float, rp_freq: int, sc_channel_from: int,
+                                 sc_channel_to: int, sc_dwell: float, sc_ping: str,
+                                 sc_timeout: float, dv_generic: bool, dv_rf_index: int,
+                                 dv_lna: bool):
+        radio_dict = current_radio_data
+        channel_valid = 0 <= sc_channel_from < sc_channel_to <= 126
+        ping_valid = self.validate_and_format_config_ping(sc_ping)
+        radio_dict['mj'].update({
+            'mode_index': int(mj_mode_index),
+            'delay': round(mj_delay, 2),
+            'language': str(mj_lang).lower()
+        })
+        radio_dict['rp'].update({
+            'mode_index': int(rp_mode_index),
+            'delay': round(rp_delay, 2),
+            'freq': int(rp_freq)
+        })
+        radio_dict['sc'].update({
+            'dwell': round(sc_dwell, 2),
+            'ping': self.validate_and_format_config_ping(sc_ping),
+            'timeout': round(sc_timeout, 2)
+        })
+        if channel_valid:
+            radio_dict['sc']['channels'].update({'from': sc_channel_from, 'to': sc_channel_to})
+        if ping_valid[0]:
+            radio_dict['sc']['ping'] = ping_valid[1]
+        radio_dict['dv'].update({
+            'generic': dv_generic,
+            'rf_index': dv_rf_index,
+            'lna': dv_lna
+        })
+        return channel_valid, radio_dict
+
+    @staticmethod
+    def is_valid_ping_partial(value):
+        if not value:
+            return True
+        if value == '0x':
+            return True
+        if value.endswith(','):
+            return True
+        pattern = r'^(0x[0-9a-fA-F]{2})(,0x[0-9a-fA-F]{2})*$'
+        return bool(re.match(pattern, value, re.IGNORECASE))

@@ -1,0 +1,33 @@
+attack:
+  mode:
+    name: 'Mode'
+    rp: 'Replay'
+    mj: 'Mousejack'
+  interval:
+    name: 'Interval'
+    fx: 'Fixed'
+    rd: 'Random'
+    min: 'Minium'
+    max: 'Maximum'
+  payload:
+    name: 'File'
+    sv: 'Save'
+    op: 'Open'
+    ex: ['txt', 'ps1', 'sh']
+    eg: 'payload.txt'
+    mode:
+      name: 'Payload'
+      ps: 'Parsed'
+      rw:  'Raw'
+  confirm:
+    scn: 'Scan'
+    atk: 'Attack'
+  language:
+    name: 'Language'
+receive:
+  rt: 'Clear List'
+log:
+  name: 'Options'
+  del: 'Delete'
+  exp: 'Export'
+  file: 'Log.xlsx'

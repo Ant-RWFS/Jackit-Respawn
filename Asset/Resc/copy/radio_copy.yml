@@ -1,0 +1,29 @@
+﻿dv:
+  generic: false
+  lna: true
+  rf:
+  - 250K
+  - 1M
+  - 2M
+  rf_index: 0
+mj:
+  delay: 0.0
+  language: us
+  mode_index: 1
+  modes:
+  - Parsed
+  - Raw Data
+rp:
+  delay: 0.0
+  freq: 1
+  mode_index: 0
+  modes:
+  - Captured
+  - Costumed
+sc:
+  channels:
+    from: 15
+    to: 126
+  dwell: 0.1
+  ping: 0x0f,0x0f,0x0f,0x0f
+  timeout: 0.5

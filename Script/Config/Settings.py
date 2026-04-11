@@ -26,6 +26,10 @@ class AppConfig:
         self.PLUGIN = self.init_plugin()
         self.FIXED_COLORS = self.init_fixed_colors()
         self.FIXED_STYLES = self.init_fixed_styles()
+        self.RADIO_CONFIG_CACHE = self.read_radio_config()
+
+    def save_configs(self):
+        self.edit_radio_config()
 
     @staticmethod
     def root():
@@ -48,6 +52,14 @@ class AppConfig:
         try:
             with open(path, 'w', encoding='utf-8-sig') as f:
                 yaml.dump(edit_data, f)
+        except FileNotFoundError:
+            raise FileNotFoundError(f'No Such file: {path}')
+
+    def edit_radio_config(self):
+        path = self.RESC_PATH / 'radio.yml'
+        try:
+            with open(path, 'w', encoding='utf-8-sig') as f:
+                yaml.dump(self.RADIO_CONFIG_CACHE, f)
         except FileNotFoundError:
             raise FileNotFoundError(f'No Such file: {path}')
 
@@ -138,7 +150,8 @@ class AppConfig:
     def init_resc(self) -> dict:
         return {
             'op': self.read_resc('operation.yml'),
-            'text': self.read_resc('text.yml'),
+            'rd': self.read_resc('radio.yml'),
+            'text': self.read_resc('text.yml')
         }
 
     def init_video(self) -> dict:
@@ -262,14 +275,32 @@ class AppConfig:
                 size=self.FONT['size']['medium'],
                 color=ft.Colors.with_opacity(0.8, ft.Colors.GREY_800),
             ),
+            'config_text': ft.TextStyle(
+                font_family='label',
+                size=self.FONT['size']['small'],
+                color=ft.Colors.PRIMARY
+            ),
             'list_button': ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=0)
             ),
-            'icon_button': ft.ButtonStyle(
+            'normal_color_button': ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=5),
+                color={
+                    ft.ControlState.DEFAULT: ft.Colors.PRIMARY,
+                    ft.ControlState.HOVERED: ft.Colors.SURFACE
+                },
+                bgcolor={
+                    ft.ControlState.HOVERED: ft.Colors.ON_PRIMARY,
+                    ft.ControlState.PRESSED: ft.Colors.ON_PRIMARY
+                }
+            ),
+            'invert_color_button': ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=5),
                 color=ft.Colors.SURFACE,
-                bgcolor=ft.Colors.PRIMARY,
-                overlay_color=ft.Colors.ON_PRIMARY
+                bgcolor={
+                    ft.ControlState.DEFAULT: ft.Colors.PRIMARY,
+                    ft.ControlState.HOVERED: ft.Colors.ON_PRIMARY
+                }
             ),
         }
 
@@ -290,6 +321,11 @@ class AppConfig:
             for line in f:
                 lines.append(line.rstrip())
         return lines
+
+    def read_radio_config(self):
+        path = self.RESC_PATH / 'radio.yml'
+        with open(path, 'r', encoding='utf-8') as f:
+            return yaml.safe_load(f)
 
     def get_language_list(self):
         path = self.RESC_PATH / 'keymap'

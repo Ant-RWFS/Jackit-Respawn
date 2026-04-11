@@ -1,5 +1,0 @@
-name: 'nrf-research-firmware'
-module: 'nRF24L01'
-usb:
-  vid: '1915'
-  pid: '0102'

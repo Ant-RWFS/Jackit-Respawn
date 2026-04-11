@@ -1,5 +1,0 @@
-name: "test-firmware"
-module: "nrf24l01"
-usb:
-  vid: 1915
-  pid: 0102

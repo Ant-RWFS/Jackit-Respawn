@@ -1,7 +1,7 @@
 import flet as ft
 from Script.Abstracts import AbstractUI
 
-CONFIGS_ITEMS = {
+CONFIG_ITEMS = {
     'HID': ['Fingerprint', 'Registry'],
     'Device': ['Driver', 'Registry']
 }
@@ -73,7 +73,7 @@ class Panel(AbstractUI):
     def delete_plugin_confirm(self, e, dict_name, file_name, callback):
         dialog = ft.AlertDialog(
             modal=True,
-            content=ft.Text(f"{self.config.RESC['text']['delete']['content']} {CONFIGS_ITEMS[dict_name][0]} plugin: "
+            content=ft.Text(f"{self.config.RESC['text']['delete']['content']} {CONFIG_ITEMS[dict_name][0]} plugin: "
                             f"'{file_name}' ?"),
             actions=[
                 ft.TextButton(f"{self.config.RESC['text']['cancel']}",
@@ -108,7 +108,7 @@ class Control(AbstractUI):
     def __init__(self, panel: Panel):
         super().__init__()
         self.panel = panel
-        self.plugin_dicts = list(CONFIGS_ITEMS.keys())
+        self.plugin_dicts = list(CONFIG_ITEMS.keys())
         self.plugin_divider = self.init_plugin_divider()
         self.plugin_bodies = self.init_plugin_bodies()
         self.plugin_labels = self.init_plugin_labels()
@@ -139,7 +139,7 @@ class Control(AbstractUI):
                 style=ft.TextThemeStyle.BODY_MEDIUM,
                 width=80,
                 height=20,
-            ) for label in CONFIGS_ITEMS.keys()
+            ) for label in CONFIG_ITEMS.keys()
         ]
 
     @staticmethod
@@ -153,7 +153,7 @@ class Control(AbstractUI):
                 )
                 for item in items
             ]
-            for category, items in CONFIGS_ITEMS.items()
+            for category, items in CONFIG_ITEMS.items()
         }
 
     def hid_list_content(self):
@@ -204,7 +204,7 @@ class Control(AbstractUI):
             icon=ft.Icons.FINGERPRINT,
             scale=0.8,
             width=200,
-            style=self.config.FIXED_STYLES['icon_button'],
+            style=self.config.FIXED_STYLES['invert_color_button'],
             on_click=lambda e: self.panel.register_plugin(e, dict_name, self.reset_hid_list)
         )
 
@@ -264,7 +264,7 @@ class Control(AbstractUI):
             icon=ft.Icons.SETTINGS_INPUT_COMPONENT,
             scale=0.8,
             width=200,
-            style=self.config.FIXED_STYLES['icon_button'],
+            style=self.config.FIXED_STYLES['invert_color_button'],
             on_click=lambda e: self.panel.register_plugin(e, dict_name, self.reset_driver_list)
         )
 
