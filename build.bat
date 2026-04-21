@@ -1,0 +1,1 @@
+python -m PyInstaller --clean "Jackit Respawn Windows.spec"

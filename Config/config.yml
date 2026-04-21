@@ -22,7 +22,7 @@ font:
 info:
   author: ANT-RWFS
   title: Jackit Respawn
-  version: 1.1.2
+  version: 1.2.2
 resc:
   file:
     op: operation.yml

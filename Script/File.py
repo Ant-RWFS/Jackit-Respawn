@@ -122,7 +122,7 @@ class File:
                 )
             self.page.update()
 
-    def delete_file(self, file_name, file_path, callback=None):
+    def delete_file(self, file_name, file_path, callback=None, reload=None):
         try:
             if not file_path.exists():
                 self.page.open(
@@ -142,6 +142,8 @@ class File:
             )
             if callback:
                 callback()
+            if reload:
+                reload()
         except Exception as ex:
             self.page.open(
                 ft.SnackBar(
@@ -156,15 +158,15 @@ class File:
         file_path = Path(self.config.THEME_PATH / file_name)
         self.delete_file(file_name, file_path)
 
-    def import_plugin_file(self, e, dict_name, callback=None):
-        self.file_open_picker.on_result = lambda event: self.handle_plugin_import(event, callback, dict_name)
+    def import_plugin_file(self, e, dict_name, callback=None, reload=None):
+        self.file_open_picker.on_result = lambda event: self.handle_plugin_import(event, callback, dict_name, reload)
         self.file_open_picker.pick_files(
             allow_multiple=False,
             file_type=ft.FilePickerFileType.CUSTOM,
-            allowed_extensions=['py']
+            allowed_extensions=['py'],
         )
 
-    def handle_plugin_import(self, e: ft.FilePickerResultEvent, callback, dict_name: str):
+    def handle_plugin_import(self, e: ft.FilePickerResultEvent, callback, dict_name: str, reload):
         if e.files and len(e.files) > 0:
             file = e.files[0]
             try:
@@ -192,6 +194,8 @@ class File:
                         )
                         if callback:
                             callback()
+                        if reload:
+                            reload()
                     else:
                         self.page.open(
                             ft.SnackBar(
@@ -210,9 +214,9 @@ class File:
                 )
             self.page.update()
 
-    def delete_plugin_file(self, dict_name: str, file_name: str, callback=None):
+    def delete_plugin_file(self, dict_name: str, file_name: str, callback=None, reload=None):
         file_path = Path(self.config.PLUGIN_PATH / dict_name / file_name)
-        self.delete_file(file_name, file_path, callback)
+        self.delete_file(file_name, file_path, callback, reload)
 
     def export_all_log_data(self, index):
         self.file_save_picker.on_result = lambda e: self.handle_export(e, index, 'all', None, None)

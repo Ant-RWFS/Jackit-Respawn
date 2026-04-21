@@ -180,6 +180,8 @@ class Control(AbstractUI):
             self.on_usb_add(vid, pid)
         elif event_type == 'remove':
             self.on_usb_remove(vid, pid)
+        elif event_type == 'reload':
+            self.on_reload_device()
         self.page.update()
 
     def on_usb_add(self, vid, pid):
@@ -201,3 +203,18 @@ class Control(AbstractUI):
             del self.device_cards[key]
             if not (self.device_cards or self.device_info_empty_hint in self.device_info_btn_list.controls):
                 self.device_info_btn_list.controls.append(self.device_info_empty_hint)
+
+    def on_reload_device(self):
+        self.selected_vid_pid = None
+        self.device_op.control.update_current_usb_id(None)
+        self.device_cards.clear()
+        self.device_info_btn_list.controls.clear()
+        self.device_info_btn_list.controls.append(self.device_info_empty_hint)
+        if self.is_device_info_expanded:
+            self.device_info_btn_list.visible = True
+            self.device_info_btn_list.width = 180
+        else:
+            self.device_info_btn_list.visible = False
+            self.device_info_btn_list.width = 0
+        self.page.update()
+

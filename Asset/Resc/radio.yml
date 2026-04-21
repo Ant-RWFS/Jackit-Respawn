@@ -1,5 +1,5 @@
 ﻿dv:
-  generic: true
+  generic: false
   lna: true
   rf:
   - 250K
