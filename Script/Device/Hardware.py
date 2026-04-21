@@ -15,7 +15,7 @@ class Service(mp.Process):
         super().__init__()
         self.cmd_queue = cmd_queue
         self.evt_queue = evt_queue
-        self.vid_pid_set = DriverRegistry().discover_vid_pid_set()
+        self.vid_pid_set = DriverRegistry.discover_vid_pid_set()
         self.daemon = True
         self.monitor = None
         self.data_ft = Formatter()
@@ -56,9 +56,7 @@ class Service(mp.Process):
                     mode = cmd['mode']
                     config = cmd['config']
                     targets = cmd['devices']
-
                     physical_id = f"{cmd['vid']}_{cmd['pid']}".lower()
-
                     if self.is_device_online(physical_id):
                         if cmd_type == 'scan_start':
                             self.stop_action(physical_id)
@@ -75,10 +73,7 @@ class Service(mp.Process):
                                 self.stop_action(latest_id)
                             self.reload_device()
                     else:
-                        if cmd_type == 'reload_device':
-                            self.reload_device()
-                        else:
-                            self.device_event('offline', cmd['vid'], cmd['pid'])
+                        self.device_event('offline', cmd['vid'], cmd['pid'])
                 except queue.Empty:
                     continue
                 except Exception as e:
@@ -87,8 +82,7 @@ class Service(mp.Process):
             self.error_report('Error', e)
 
     def reload_device(self):
-        self.vid_pid_set = DriverRegistry().discover_vid_pid_set()
-        self.device_event('reload')
+        self.vid_pid_set = DriverRegistry.discover_vid_pid_set()
 
     def on_device_connected(self, device_id: str, device_info: Dict[str, Any]):
         vid = device_info.get(ID_VENDOR_ID, '').lower()
@@ -99,6 +93,7 @@ class Service(mp.Process):
                 (vid, pid) in self.vid_pid_set) and (
                 physical_id not in self.processed_devices):
             self.processed_devices.add(physical_id)
+
             self.device_event('add', vid, pid)
 
     def on_device_disconnected(self, device_id: str, device_info: Dict[str, Any]):
@@ -113,7 +108,7 @@ class Service(mp.Process):
     def is_device_online(self, physical_id: str):
         return physical_id.lower() in (self.processed_devices or set())
 
-    def device_event(self, evt, vid=None, pid=None, info=None):
+    def device_event(self, evt, vid, pid, info=None):
         self.evt_queue.put(
             (
                 evt,
@@ -168,9 +163,11 @@ class Service(mp.Process):
                 })
             return
 
+        valid_hid_classes = set(FingerprintRegistry.discover().values())
         valid_devices = {}
         for addr, device_info in devices.items():
-            if FingerprintRegistry.get_name(device_info['device']) is not None:
+            device_class = device_info['device']
+            if device_class in valid_hid_classes:
                 valid_devices[addr] = device_info
         if not valid_devices and mode != 'rp':
             self.action_report('atk_fin', physical_id, vid, pid, {}, {
@@ -253,6 +250,7 @@ class Service(mp.Process):
                                            current_info.copy(),
                                            report
                                            )
+
                     scanner.sniff(0.1, addr)
                     if device_count + 1 < len(scanner.devices):
                         device_count += 1
@@ -293,7 +291,6 @@ class Service(mp.Process):
                 'target_hid': attacker.report_hid(targets)
             })
             attacker.close()
-
 
     def rawdata_attack(self, vid, pid, physical_id, targets, payload, config, stop_event):
         attacker = Predator(vid, pid, config)
@@ -365,8 +362,8 @@ class Service(mp.Process):
             'physical_id': physical_id,
             'vendor_id': vid,
             'product_id': pid,
-            'info': self.sanitize_device_info(info),
-            'report': self.sanitize_device_info(report)
+            'info': info,
+            'report': report
         }))
 
     def error_report(self, title, error):
@@ -382,9 +379,3 @@ class Service(mp.Process):
                     'detail': f'{error}'
                 }
             }))
-
-    @staticmethod
-    def sanitize_device_info(info):
-        if 'device' in info:
-            info['device'] = FingerprintRegistry.get_class(info['device'])
-        return info

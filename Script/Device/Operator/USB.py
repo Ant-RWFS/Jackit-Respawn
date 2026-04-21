@@ -20,7 +20,7 @@ class Predator(object):
         self.rf = self.config['dv']['rf'][self.rf_index]
         self.generic = self.config['dv']['generic']
         self.devices = {}
-        # self.HID = list(FingerprintRegistry.discover().values())
+        self.HID = list(FingerprintRegistry.discover().values())
         self.init_radio(config['dv']['lna'])
         self.scan_active = False
 
@@ -171,7 +171,7 @@ class Predator(object):
     def get_hid(self, payload):
         if not payload:
             return None
-        for hid in list(FingerprintRegistry.discover().values()):
+        for hid in self.HID:
             if hid.fingerprint(payload):
                 return hid
         return None

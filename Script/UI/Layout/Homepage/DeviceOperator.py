@@ -3,8 +3,6 @@ from Script.Data import USBEvent
 from Script.Abstracts import AbstractUI
 from Script.UI.Layout.Homepage.Signal import Diagram
 from Script.UI.Layout.Homepage.Controls import *
-from Script.Plugins import FingerprintRegistry
-# import datetime
 
 
 class Panel(AbstractUI):
@@ -12,9 +10,6 @@ class Panel(AbstractUI):
         super().__init__()
         self.control = Control(self)
         self.layout = self.init_layout()
-        # # Time Debug
-        # self.start = datetime.datetime.now()
-        # self.first_scan = True
 
     def init_layout(self):
         return ft.Container(
@@ -33,7 +28,7 @@ class Panel(AbstractUI):
 
     def toggle_recv_detail(self):
         self.control.device_recv_detail_window.visible = not self.control.device_recv_detail_window.visible
-        self.control.device_output_window.update()
+        self.control.device_recv_detail_window.update()
 
     def reset_recv_list(self, e):
         self.control.device_recv_list.controls.clear()
@@ -73,7 +68,6 @@ class Panel(AbstractUI):
         self.control.attack_confirm_btn.reset()
 
     def scan_confirm(self, e):
-        # self.start = datetime.datetime.now()
         self.control.scan_confirm_btn.start_animation()
         if self.control.selected_vid_pid:
             if not self.control.scan_confirm_btn.layout.data:
@@ -89,6 +83,9 @@ class Panel(AbstractUI):
                 'payload': '',
                 'mode': '',
                 'config': self.config.RADIO_CONFIG_CACHE
+                # 'mode': '',
+                # 'parse': False,
+                # 'language': 'us'
             })
 
     def reset_scan_confirm_btn(self):
@@ -111,6 +108,9 @@ class Panel(AbstractUI):
                           'payload': payload,
                           'mode': f'{self.control.attack_mode_btn.layout.data}',
                           'config': self.config.RADIO_CONFIG_CACHE
+                          # 'mode': f'{self.control.attack_mode_btn.layout.data}',
+                          # 'parse': self.control.payload_mode_btn.data,
+                          # 'language': f'{str(self.control.payload_language_btn.data).lower()}',
                           })
 
     def payload_re_check(self, payload):
@@ -122,6 +122,21 @@ class Panel(AbstractUI):
         elif mode_index == 1:
             if not self.data_ft.re_raw_payload(payload):
                 return
+        # if  == 'Mousejack':
+        #     if self.config.RADIO_CONFIG_CACHE['mj']['mode_index'] == 0:
+        #         if not self.data_ft.re_parse_payload(payload):
+        #             return
+        #     else:
+        #         if not self.data_ft.re_raw_payload(payload):
+        #             return
+        # else:
+
+    #     if self.control.payload_mode_btn.data:
+    #         if not self.data_ft.re_parse_payload(payload):
+    #             return
+    #     else:
+    #         if not self.data_ft.re_raw_payload(payload):
+    #             return
 
     def payload_reformat(self, payload):
         key = self.control.attack_mode_btn.layout.data
@@ -154,6 +169,8 @@ class Control(AbstractUI):
         self.reset_recv_btn = Button.ResetRecvButton(self.panel.reset_recv_list)
         self.payload_file_op_btn = Button.PayloadFileOPButton(self.payload_input_window)
         self.attack_mode_btn = Button.AttackModeButton()
+        # self.payload_language_btn = self.init_payload_language_btn()
+        # self.payload_mode_btn = self.init_payload_mode_btn()
         self.scan_confirm_btn = Button.ScanConfirmButton(self.panel.scan_confirm)
         self.attack_confirm_btn = Button.AttackConfirmButton(self.panel.attack_confirm)
         self.radio_setting_btn = Button.RadioSettingButton()
@@ -185,13 +202,12 @@ class Control(AbstractUI):
     def on_usb_receive(self, event: USBEvent):
         data = event.device['info']
         if data['device'] or data['payload']:
-            # print(f"[Scan Duration] {(datetime.datetime.now() - self.panel.start).total_seconds():.3f} seconds")
             data_dict = {
                 'No.': len(self.device_recv_list.controls) + 1,
                 'Timestamp': data['timestamp'],
                 'Address': self.data_ft.form_hex_list(data['address'][::-1], ':'),
                 'Channels': self.data_ft.form_list(data['channels'], ','),
-                'HID': data['device'].description() if data['device'] else "Unknown",
+                'HID': data['device'].description() if data['device'] else 'Unknown',
                 'Data': self.data_ft.form_hex_list(data['payload'])
             }
             self.device_recv_list.controls.append(self.device_recv_data_bar(data, data_dict))
@@ -236,6 +252,34 @@ class Control(AbstractUI):
             width=100,
         )
 
+    # def init_payload_language_btn(self):
+    #     texts = self.config.RESC['op']['attack']['language']
+    #     current = 'us'
+    #     return ft.SubmenuButton(
+    #         data=current,
+    #         content=self.attack_bar_btn_text(f"{texts['name']}: {current}"),
+    #         controls=[
+    #             self.attack_bar_sub_btn(None,
+    #                                     str(name).upper(),
+    #                                     lambda e, lang=name.lower():
+    #                                     self.panel.set_payload_language(e, texts['name'], lang))
+    #             for name in self.config.get_language_list()
+    #         ],
+    #     )
+    #
+    # def init_payload_mode_btn(self):
+    #     texts = self.config.RESC['op']['attack']['payload']['mode']
+    #     return ft.SubmenuButton(
+    #         data=True,
+    #         content=self.attack_bar_btn_text(f"{texts['name']}: {texts['ps']}"),
+    #         controls=[
+    #             self.attack_bar_sub_btn(ft.Icons.CODE, texts['ps'],
+    #                                     lambda e: self.panel.set_payload_mode(e, texts['name'], texts['ps'])),
+    #             self.attack_bar_sub_btn(ft.Icons.DATA_ARRAY, texts['rw'],
+    #                                     lambda e: self.panel.set_payload_mode(e, texts['name'], texts['rw']))
+    #         ],
+    #     )
+
     def init_attack_confirm_btn(self):
         return ft.MenuItemButton(
             data=False,
@@ -256,6 +300,8 @@ class Control(AbstractUI):
                     ft.Container(self.reset_recv_btn.layout, expand=1),
                     ft.Container(self.payload_file_op_btn.layout, expand=1),
                     ft.Container(self.attack_mode_btn.layout, expand=1),
+                    # self.payload_language_btn,
+                    # self.payload_mode_btn,
                     ft.Container(self.scan_confirm_btn.layout, expand=1),
                     ft.Container(self.attack_confirm_btn.layout, expand=1),
                     ft.Container(self.radio_setting_btn.layout, expand=1)

@@ -66,11 +66,11 @@ class Panel(AbstractUI):
         )
         self.page.open(dialog)
 
-    def register_plugin(self, e, dict_name, callback, reload_device=False):
-        reload = self.reload_device if reload_device else None
-        self.file_op.import_plugin_file(e, dict_name, callback, reload)
+    def register_plugin(self, e, dict_name, callback):
+        self.file_op.import_plugin_file(e, dict_name, callback)
+        self.reload_device()
 
-    def delete_plugin_confirm(self, e, dict_name, file_name, callback, reload=False):
+    def delete_plugin_confirm(self, e, dict_name, file_name, callback):
         dialog = ft.AlertDialog(
             modal=True,
             content=ft.Text(f"{self.config.RESC['text']['delete']['content']} {CONFIG_ITEMS[dict_name][0]} plugin: "
@@ -80,20 +80,15 @@ class Panel(AbstractUI):
                               on_click=lambda e: self.page.close(dialog)),
                 ft.TextButton(f"{self.config.RESC['text']['confirm']}",
                               on_click=lambda e: self.delete_plugin(e, dict_name, file_name, dialog,
-                                                                    callback, reload))
+                                                                    callback))
             ],
             actions_alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
         self.page.open(dialog)
 
-    def reset_hid_list(self):
-        self.config.reload_plugin()
-        self.control.fpr_list.content = self.control.hid_list_content()
-        self.control.fpr_list.update()
-
-    def delete_plugin(self, e, dict_name, file_name, dialog, callback=None, reload_device=False):
-        reload = self.reload_device if reload_device else None
-        self.file_op.delete_plugin_file(dict_name, file_name, callback, reload)
+    def delete_plugin(self, e, dict_name, file_name, dialog, callback=None):
+        self.file_op.delete_plugin_file(dict_name, file_name, callback)
+        self.reload_device()
         self.page.close(dialog)
 
     def reload_device(self):
@@ -104,7 +99,8 @@ class Panel(AbstractUI):
             'devices': None,
             'payload': '',
             'mode': '',
-            'config': {}
+            'parse': False,
+            'language': 'us'
         })
 
 
@@ -173,7 +169,7 @@ class Control(AbstractUI):
                     style=self.config.FIXED_STYLES['list_button'],
                     on_click=lambda e, file_name=hid: self.panel.display_registered_plugin(e, dict_name, file_name),
                     on_long_press=lambda e, file_name=hid: self.panel.delete_plugin_confirm(e, dict_name, file_name,
-                                                                                            self.panel.reset_hid_list)
+                                                                                            self.reset_hid_list)
                 )
                 for hid in self.config.PLUGIN['hid']
             ],
@@ -187,6 +183,11 @@ class Control(AbstractUI):
             border=ft.border.all(1, ft.Colors.PRIMARY),
             border_radius=5
         )
+
+    def reset_hid_list(self):
+        self.config.reload_plugin()
+        self.fpr_list.content = self.hid_list_content()
+        self.fpr_list.update()
 
     def init_fpr_list_window(self):
         return ft.Row(
@@ -204,7 +205,7 @@ class Control(AbstractUI):
             scale=0.8,
             width=200,
             style=self.config.FIXED_STYLES['invert_color_button'],
-            on_click=lambda e: self.panel.register_plugin(e, dict_name, self.panel.reset_hid_list)
+            on_click=lambda e: self.panel.register_plugin(e, dict_name, self.reset_hid_list)
         )
 
     def init_fpr_registry_config(self):
@@ -228,8 +229,7 @@ class Control(AbstractUI):
                     style=self.config.FIXED_STYLES['list_button'],
                     on_click=lambda e, file_name=driver: self.panel.display_registered_plugin(e, dict_name, file_name),
                     on_long_press=lambda e, file_name=driver: self.panel.delete_plugin_confirm(e, dict_name, file_name,
-                                                                                               self.reset_driver_list,
-                                                                                               True)
+                                                                                               self.reset_driver_list)
                 )
                 for driver in self.config.PLUGIN['device']
             ],
@@ -265,7 +265,7 @@ class Control(AbstractUI):
             scale=0.8,
             width=200,
             style=self.config.FIXED_STYLES['invert_color_button'],
-            on_click=lambda e: self.panel.register_plugin(e, dict_name, self.reset_driver_list, True)
+            on_click=lambda e: self.panel.register_plugin(e, dict_name, self.reset_driver_list)
         )
 
     def init_driver_registry_config(self):
